@@ -10,7 +10,7 @@ export const RouterProvider = ({ children }: RouterProviderProps) => {
   return (
     <BrowserRouter>
       <Routes>
-         <Route path={ROUTES.Home} element={<HomePage />} />
+        <Route path={ROUTES.Home} element={<HomePage />} />
       </Routes>
       {children}
     </BrowserRouter>
