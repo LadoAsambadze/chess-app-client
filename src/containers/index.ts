@@ -1,1 +1,1 @@
-export * from "./routerProvider"
+export * from "./RouterProvider"

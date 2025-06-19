@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { BrowserRouter, Route, Routes} from 'react-router-dom';
-import { ROUTES } from '../../enums/routes/Routes';
-import { HomePage } from '../../pages/homePage/HomePage';
+import { ROUTES } from '../../enums/Routes/Routes';
+import { HomePage } from '../../pages/HomePage/HomePage';
 type RouterProviderProps = PropsWithChildren<object>;
 
 
