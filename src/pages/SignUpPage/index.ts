@@ -1,1 +1,1 @@
-export { SignUpPage } from "./SignUpPage"
+export { SignupPage } from './SignUpPage';

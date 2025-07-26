@@ -1,9 +1,16 @@
-import { RouterProvider } from "./containers";
+import { ApolloProvider } from '@apollo/client';
+import { RouterProvider } from './containers';
+import client from './apollo/client';
+import { AuthProvider } from './containers/AuthContext/AuthContext';
 
 function App() {
   return (
     <>
-      <RouterProvider />
+      <ApolloProvider client={client}>
+        <AuthProvider>
+          <RouterProvider />
+        </AuthProvider>
+      </ApolloProvider>
     </>
   );
 }

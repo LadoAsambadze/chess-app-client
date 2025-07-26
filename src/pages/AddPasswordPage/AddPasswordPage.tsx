@@ -1,43 +1,28 @@
 'use client';
 
-import type React from 'react';
+import { useState } from 'react';
 
-import { useState, useEffect } from 'react';
+interface AddPasswordPageProps {
+  userId: string;
+  userEmail: string;
+}
 
-export function SignupPage() {
+export function AddPasswordPage({ userId, userEmail }: AddPasswordPageProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+
   const [formData, setFormData] = useState({
-    firstname: '',
-    lastname: '',
-    email: '',
     password: '',
-    phone: '',
+    confirmPassword: '',
   });
 
   const [validationErrors, setValidationErrors] = useState<{
     [key: string]: string;
   }>({});
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const errorMessage = urlParams.get('message');
-
-    if (token) {
-      setSuccess('Google authentication successful!');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    if (errorMessage) {
-      setError(decodeURIComponent(errorMessage));
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
 
   const validatePassword = (password: string) => {
     let strength = 0;
@@ -52,31 +37,16 @@ export function SignupPage() {
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
 
-    if (!formData.firstname.trim()) {
-      errors.firstname = 'First name is required';
-    }
-
-    if (!formData.lastname.trim()) {
-      errors.lastname = 'Last name is required';
-    }
-
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-
     if (!formData.password) {
       errors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       errors.password = 'Password must be at least 8 characters long';
     }
 
-    if (
-      formData.phone &&
-      !/^[+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))
-    ) {
-      errors.phone = 'Please enter a valid phone number';
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
     setValidationErrors(errors);
@@ -99,33 +69,20 @@ export function SignupPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`, // Assuming you store the token
         },
         credentials: 'include',
         body: JSON.stringify({
           query: `
-            mutation Signup($input: SignupRequest!) {
-              signup(signupInput: $input) {
-                user {
-                  id
-                  email
-                  firstname
-                  lastname
-                  avatar
-                  role
-                  method
-                }
-                accessToken
+            mutation AddPasswordToAccount($password: String!) {
+              addPasswordToAccount(password: $password) {
+                success
+                message
               }
             }
           `,
           variables: {
-            input: {
-              firstname: formData.firstname,
-              lastname: formData.lastname,
-              email: formData.email,
-              password: formData.password,
-              phone: formData.phone.trim() || undefined,
-            },
+            password: formData.password,
           },
         }),
       });
@@ -136,25 +93,18 @@ export function SignupPage() {
         throw new Error(result.errors[0].message);
       }
 
-      setSuccess('Account created successfully! You can now sign in.');
+      setSuccess(
+        'Password added successfully! You can now sign in with your email and password.'
+      );
       setFormData({
-        firstname: '',
-        lastname: '',
-        email: '',
         password: '',
-        phone: '',
+        confirmPassword: '',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed');
+      setError(err instanceof Error ? err.message : 'Failed to add password');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleAuth = () => {
-    setIsGoogleLoading(true);
-    setError(null);
-    window.location.href = 'http://localhost:4000/auth/google';
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -210,8 +160,11 @@ export function SignupPage() {
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <h1 style={styles.title}>Create your account</h1>
-          <p style={styles.subtitle}>Join us today and get started</p>
+          <h1 style={styles.title}>Add Password</h1>
+          <p style={styles.subtitle}>
+            Add a password to your account ({userEmail}) for additional sign-in
+            options
+          </p>
         </div>
 
         {/* Success Message */}
@@ -230,138 +183,22 @@ export function SignupPage() {
           </div>
         )}
 
-        {/* Google Sign Up Button */}
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={isGoogleLoading}
-          style={{
-            ...styles.googleButton,
-            ...(isGoogleLoading ? styles.googleButtonDisabled : {}),
-          }}
-        >
-          {isGoogleLoading ? (
-            <div style={styles.spinner} />
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path
-                fill="#4285f4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34a853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#fbbc05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              />
-              <path
-                fill="#ea4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
-            </svg>
-          )}
-          {isGoogleLoading ? 'Signing up...' : 'Continue with Google'}
-        </button>
-
-        {/* Divider */}
-        <div style={styles.divider}>
-          <div style={styles.dividerLine} />
-          <span style={styles.dividerText}>or</span>
-          <div style={styles.dividerLine} />
+        {/* Info Alert */}
+        <div style={styles.infoAlert}>
+          <div style={styles.infoIcon}>ℹ️</div>
+          <div>
+            <p style={styles.infoText}>
+              Your account was created with Google. Adding a password will allow
+              you to sign in with either Google or your email and password.
+            </p>
+          </div>
         </div>
 
-        {/* Signup Form */}
+        {/* Add Password Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.nameRow}>
-            <div style={styles.nameField}>
-              <label htmlFor="firstname" style={styles.label}>
-                First Name *
-              </label>
-              <input
-                id="firstname"
-                type="text"
-                value={formData.firstname}
-                onChange={(e) => handleInputChange('firstname', e.target.value)}
-                style={{
-                  ...styles.input,
-                  ...(validationErrors.firstname ? styles.inputError : {}),
-                }}
-                placeholder="Enter your first name"
-              />
-              {validationErrors.firstname && (
-                <span style={styles.fieldError}>
-                  {validationErrors.firstname}
-                </span>
-              )}
-            </div>
-            <div style={styles.nameField}>
-              <label htmlFor="lastname" style={styles.label}>
-                Last Name *
-              </label>
-              <input
-                id="lastname"
-                type="text"
-                value={formData.lastname}
-                onChange={(e) => handleInputChange('lastname', e.target.value)}
-                style={{
-                  ...styles.input,
-                  ...(validationErrors.lastname ? styles.inputError : {}),
-                }}
-                placeholder="Enter your last name"
-              />
-              {validationErrors.lastname && (
-                <span style={styles.fieldError}>
-                  {validationErrors.lastname}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div style={styles.field}>
-            <label htmlFor="email" style={styles.label}>
-              Email Address *
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              style={{
-                ...styles.input,
-                ...(validationErrors.email ? styles.inputError : {}),
-              }}
-              placeholder="Enter your email address"
-            />
-            {validationErrors.email && (
-              <span style={styles.fieldError}>{validationErrors.email}</span>
-            )}
-          </div>
-
-          <div style={styles.field}>
-            <label htmlFor="phone" style={styles.label}>
-              Phone Number <span style={styles.optional}>(optional)</span>
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              style={{
-                ...styles.input,
-                ...(validationErrors.phone ? styles.inputError : {}),
-              }}
-              placeholder="Enter your phone number"
-            />
-            {validationErrors.phone && (
-              <span style={styles.fieldError}>{validationErrors.phone}</span>
-            )}
-          </div>
-
           <div style={styles.field}>
             <label htmlFor="password" style={styles.label}>
-              Password *
+              New Password
             </label>
             <div style={styles.passwordContainer}>
               <input
@@ -409,6 +246,41 @@ export function SignupPage() {
             )}
           </div>
 
+          <div style={styles.field}>
+            <label htmlFor="confirmPassword" style={styles.label}>
+              Confirm Password
+            </label>
+            <div style={styles.passwordContainer}>
+              <input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={(e) =>
+                  handleInputChange('confirmPassword', e.target.value)
+                }
+                style={{
+                  ...styles.passwordInput,
+                  ...(validationErrors.confirmPassword
+                    ? styles.inputError
+                    : {}),
+                }}
+                placeholder="Confirm your password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.passwordToggle}
+              >
+                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            {validationErrors.confirmPassword && (
+              <span style={styles.fieldError}>
+                {validationErrors.confirmPassword}
+              </span>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={isLoading}
@@ -420,19 +292,18 @@ export function SignupPage() {
             {isLoading ? (
               <>
                 <div style={styles.spinner} />
-                Creating account...
+                Adding password...
               </>
             ) : (
-              'Create account'
+              'Add Password'
             )}
           </button>
         </form>
 
         <div style={styles.footer}>
           <p style={styles.footerText}>
-            Already have an account?{' '}
-            <a href="/signin" style={styles.link}>
-              Sign in
+            <a href="/dashboard" style={styles.link}>
+              ← Back to Dashboard
             </a>
           </p>
         </div>
@@ -521,56 +392,31 @@ const styles = {
     margin: 0,
     fontWeight: '500',
   },
-  googleButton: {
-    width: '100%',
-    padding: '14px 20px',
-    border: '2px solid #e2e8f0',
+  infoAlert: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    padding: '16px',
+    backgroundColor: '#eff6ff',
+    border: '1px solid #bfdbfe',
     borderRadius: '12px',
-    backgroundColor: 'white',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
-    marginBottom: '28px',
-    transition: 'all 0.2s ease',
-    color: '#374151',
+    marginBottom: '24px',
   },
-  googleButtonDisabled: {
-    cursor: 'not-allowed',
-    opacity: 0.6,
+  infoIcon: {
+    fontSize: '18px',
+    marginRight: '12px',
+    marginTop: '2px',
   },
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '28px',
-  },
-  dividerLine: {
-    flex: 1,
-    height: '1px',
-    backgroundColor: '#e2e8f0',
-  },
-  dividerText: {
-    padding: '0 20px',
-    color: '#64748b',
+  infoText: {
+    color: '#1e40af',
     fontSize: '14px',
+    margin: 0,
     fontWeight: '500',
+    lineHeight: '1.5',
   },
   form: {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '20px',
-  },
-  nameRow: {
-    display: 'flex',
-    gap: '16px',
-  },
-  nameField: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column' as const,
   },
   field: {
     display: 'flex',
@@ -582,24 +428,6 @@ const styles = {
     color: '#374151',
     marginBottom: '8px',
     display: 'block',
-  },
-  optional: {
-    color: '#64748b',
-    fontWeight: '400',
-  },
-  input: {
-    width: '100%',
-    padding: '12px 16px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: '16px',
-    transition: 'all 0.2s ease',
-    backgroundColor: '#fafafa',
-    boxSizing: 'border-box' as const,
-  },
-  inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
   },
   passwordContainer: {
     position: 'relative' as const,
@@ -613,6 +441,10 @@ const styles = {
     transition: 'all 0.2s ease',
     backgroundColor: '#fafafa',
     boxSizing: 'border-box' as const,
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    backgroundColor: '#fef2f2',
   },
   passwordToggle: {
     position: 'absolute' as const,

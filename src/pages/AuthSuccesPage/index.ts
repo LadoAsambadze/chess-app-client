@@ -1,0 +1,1 @@
+export { AuthSuccessPage } from './AuthSuccesPage';
