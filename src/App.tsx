@@ -1,13 +1,14 @@
-import { ApolloProvider } from '@apollo/client';
-import { RouterProvider } from './containers';
 import client from './apollo/client';
-import { AuthProvider } from './containers/AuthContext/AuthContext';
+import { Logout } from './auth/Logout';
+import { AuthProvider, RouterProvider } from './providers';
+import { ApolloProvider } from '@apollo/client';
 
 function App() {
   return (
     <>
       <ApolloProvider client={client}>
         <AuthProvider>
+          <Logout />
           <RouterProvider />
         </AuthProvider>
       </ApolloProvider>
