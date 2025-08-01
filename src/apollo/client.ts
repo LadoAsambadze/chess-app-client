@@ -6,6 +6,7 @@ import {
 } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
+import { accessTokenVar } from './store';
 
 const httpLink = createHttpLink({
   uri: 'http://localhost:4000/graphql',
@@ -13,8 +14,7 @@ const httpLink = createHttpLink({
 });
 
 const authLink = setContext((_, { headers }) => {
-  const token = localStorage.getItem('accessToken');
-
+  const token = accessTokenVar();
   return {
     headers: {
       ...headers,
@@ -23,59 +23,35 @@ const authLink = setContext((_, { headers }) => {
   };
 });
 
-const errorLink = onError(
-  ({ graphQLErrors, networkError, operation, forward }) => {
-    if (graphQLErrors) {
-      graphQLErrors.forEach(({ message, extensions }) => {
-        if (
-          message.includes('Invalid refresh token') ||
-          message.includes('refresh token not found')
-        ) {
-          console.log(`ℹ️ Expected auth state: ${message}`);
-          return;
-        }
+const errorLink = onError(({ graphQLErrors, networkError }) => {
+  if (graphQLErrors) {
+    graphQLErrors.forEach(({ message, extensions }) => {
+      console.error(`GraphQL error: ${message}`);
 
-        console.error(`GraphQL error: ${message}`);
-
-        if (extensions?.code === 'UNAUTHENTICATED') {
-          console.log('🔄 Authentication error - token may need refresh');
-          // Don't automatically redirect - let the auth context handle it
-        }
-      });
-    }
-
-    if (networkError) {
-      console.error(`Network error:`, networkError);
-
-      if ('statusCode' in networkError && networkError.statusCode === 401) {
-        console.log('🔄 401 Unauthorized - auth context will handle refresh');
+      if (extensions?.code === 'UNAUTHENTICATED') {
+        accessTokenVar('');
+        window.dispatchEvent(new CustomEvent('auth-error'));
       }
+    });
+  }
+
+  if (networkError) {
+    console.error('Network error:', networkError);
+
+    if ('statusCode' in networkError && networkError.statusCode === 401) {
+      accessTokenVar('');
+      window.dispatchEvent(new CustomEvent('auth-error'));
     }
   }
-);
+});
 
 export const apolloClient = new ApolloClient({
   link: from([errorLink, authLink, httpLink]),
   cache: new InMemoryCache(),
   defaultOptions: {
-    watchQuery: {
-      errorPolicy: 'all',
-      context: {
-        credentials: 'include',
-      },
-    },
-    query: {
-      errorPolicy: 'all',
-      context: {
-        credentials: 'include',
-      },
-    },
-    mutate: {
-      errorPolicy: 'all',
-      context: {
-        credentials: 'include',
-      },
-    },
+    watchQuery: { errorPolicy: 'all' },
+    query: { errorPolicy: 'all' },
+    mutate: { errorPolicy: 'all' },
   },
 });
 

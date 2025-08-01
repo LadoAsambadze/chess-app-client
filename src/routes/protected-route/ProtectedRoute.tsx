@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../../providers/auth-provider/AuthProvider';
+import { useAuth } from '../../providers/auth-provider';
 
 interface ProtectedRouteProps {
   redirectTo?: string;
@@ -13,6 +13,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+
+  console.log('ProtectedRoute:', { isAuthenticated, user, isLoading });
 
   if (isLoading) {
     return (

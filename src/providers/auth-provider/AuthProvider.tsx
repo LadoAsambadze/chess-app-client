@@ -1,319 +1,167 @@
-import type React from 'react';
-import { createContext, useContext, useState, useEffect } from 'react';
-import type { ReactNode } from 'react';
-import { useMutation, gql } from '@apollo/client';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+import { useApolloClient, useReactiveVar } from '@apollo/client';
+import {
+  accessTokenVar,
+  isAuthenticatedVar,
+  userVar,
+} from '../../apollo/store';
+import {
+  SIGNIN_MUTATION,
+  REFRESH_TOKEN_MUTATION,
+} from '../../graphql/mutation';
+import type {
+  AuthContextType,
+  AuthProviderProps,
+  SigninInput,
+  User,
+} from './types';
 
-// Your existing GraphQL mutations
-const SIGNIN_MUTATION = gql`
-  mutation Signin($signinInput: SigninRequest!) {
-    signin(signinInput: $signinInput) {
-      user {
-        id
-        email
-        firstname
-        lastname
-        avatar
-        role
-      }
-      accessToken
-    }
-  }
-`;
-
-const REFRESH_TOKEN_MUTATION = gql`
-  mutation RefreshToken {
-    refreshTokens {
-      accessToken
-    }
-  }
-`;
-
-const LOGOUT_MUTATION = gql`
-  mutation Logout {
-    logout {
-      message
-    }
-  }
-`;
-
-interface User {
-  id: string;
-  email: string;
-  firstname: string;
-  lastname: string;
-  avatar?: string;
-  role: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  accessToken: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-  signin: (input: any) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshToken: () => Promise<boolean>;
-}
-
+// Create AuthContext with undefined initial value to ensure usage inside Provider only
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Utility functions
-const decodeJWT = (token: string): any => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Failed to decode JWT:', error);
-    return null;
-  }
-};
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  console.log('AuthProvider mounting...');
 
-const isTokenExpired = (token: string, bufferSeconds = 30): boolean => {
-  try {
-    const payload = decodeJWT(token);
-    if (!payload || !payload.exp) return true;
-    const currentTime = Math.floor(Date.now() / 1000);
-    return payload.exp < currentTime + bufferSeconds;
-  } catch {
-    return true;
-  }
-};
+  const client = useApolloClient();
 
-// 🔍 Debug function to check cookies
-const debugCookies = () => {
-  console.log('🍪 All cookies:', document.cookie);
-  console.log('🌐 Current domain:', window.location.hostname);
-  console.log('🔒 Current protocol:', window.location.protocol);
-  console.log('🚪 Current port:', window.location.port);
-};
+  // Read global reactive vars from Apollo Client for centralized auth state
+  const reactiveUser = useReactiveVar(userVar);
+  const reactiveIsAuthenticated = useReactiveVar(isAuthenticatedVar);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Local React states for UI loading indicators
+  const [user, setUser] = useState<User | null>(reactiveUser);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    reactiveIsAuthenticated
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Configure mutations with proper credentials
-  const [signinMutation] = useMutation(SIGNIN_MUTATION, {
-    context: { credentials: 'include' },
-    errorPolicy: 'all',
+  console.log('AuthProvider initial state:', {
+    user,
+    isAuthenticated,
+    isLoading,
+    hasSession: sessionStorage.getItem('hasSession'),
   });
 
-  const [refreshTokenMutation] = useMutation(REFRESH_TOKEN_MUTATION, {
-    context: { credentials: 'include' },
-    errorPolicy: 'all',
-  });
-
-  const [logoutMutation] = useMutation(LOGOUT_MUTATION, {
-    context: { credentials: 'include' },
-    errorPolicy: 'all',
-  });
-
-  // Enhanced refresh token function with better debugging
-  const refreshToken = async (): Promise<boolean> => {
-    console.log('🔄 Attempting token refresh...');
-
-    // Debug cookie information
-    debugCookies();
-
-    try {
-      // Make the refresh request
-      const { data, errors } = await refreshTokenMutation();
-
-      if (errors && errors.length > 0) {
-        console.error('❌ Refresh token errors:', errors);
-
-        // Log detailed error information
-        errors.forEach((error) => {
-          console.error('Error message:', error.message);
-          console.error('Error extensions:', error.extensions);
-          console.error('Error path:', error.path);
-        });
-
-        // Check for authentication errors
-        const hasAuthError = errors.some(
-          (error) =>
-            error.message.includes('refresh token') ||
-            error.message.includes('not found') ||
-            error.message.includes('expired') ||
-            error.message.includes('invalid') ||
-            error.extensions?.code === 'UNAUTHENTICATED'
-        );
-
-        if (hasAuthError) {
-          console.log('🚫 Refresh token is invalid or expired');
-          // Clear auth state
-          setUser(null);
-          setAccessToken(null);
-          localStorage.removeItem('accessToken');
-          return false;
-        }
-      }
-
-      const newToken = data?.refreshTokens?.accessToken;
-      if (newToken) {
-        console.log('✅ Token refresh successful');
-        setAccessToken(newToken);
-        updateUserFromToken(newToken);
-        localStorage.setItem('accessToken', newToken);
-        return true;
-      }
-
-      console.log('❌ No new token received in response');
-      console.log('Response data:', data);
-      return false;
-    } catch (error) {
-      console.error('❌ Token refresh failed with exception:', error);
-
-      // Log network error details
-      if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-      }
-
-      // Clear auth state on error
-      setUser(null);
-      setAccessToken(null);
-      localStorage.removeItem('accessToken');
-      return false;
-    }
+  // Helper to clear auth state
+  const clearAuthState = () => {
+    accessTokenVar('');
+    userVar(null);
+    isAuthenticatedVar(false);
+    setUser(null);
+    setIsAuthenticated(false);
+    // Clear session flag
+    sessionStorage.removeItem('hasSession');
   };
 
-  const updateUserFromToken = (token: string) => {
-    const payload = decodeJWT(token);
-    if (payload) {
-      const userData = {
-        id: payload.sub,
-        email: payload.email,
-        firstname: payload.firstname || '',
-        lastname: payload.lastname || '',
-        avatar: payload.avatar,
-        role: payload.role,
-      };
-      setUser(userData);
-    }
-  };
-
-  const signin = async (input: any) => {
-    console.log('🔐 Starting signin...');
+  // Refresh token using httpOnly cookie
+  const refreshToken = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const { data, errors } = await signinMutation({
-        variables: { signinInput: input },
+      const { data } = await client.mutate({
+        mutation: REFRESH_TOKEN_MUTATION,
       });
 
-      if (errors && errors.length > 0) {
-        const errorMessage = errors[0].message;
-        setError(errorMessage);
-        throw new Error(errorMessage);
+      if (data?.refreshAccessToken?.accessToken) {
+        const token = data.refreshAccessToken.accessToken;
+        const userData = data.refreshAccessToken.user; // If your refresh returns user data
+
+        accessTokenVar(token);
+        if (userData) {
+          userVar(userData);
+          setUser(userData);
+        }
+        isAuthenticatedVar(true);
+        setIsAuthenticated(true);
+
+        return true;
+      } else {
+        clearAuthState();
+        return false;
       }
-
-      if (data?.signin) {
-        console.log('✅ Signin successful');
-        setUser(data.signin.user);
-        setAccessToken(data.signin.accessToken);
-        localStorage.setItem('accessToken', data.signin.accessToken);
-
-        // Debug cookies after signin
-        setTimeout(debugCookies, 100);
-      }
-    } catch (err: any) {
-      console.error('❌ Signin failed:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    console.log('🚪 Starting logout...');
-    try {
-      await logoutMutation();
-      console.log('✅ Logout successful');
     } catch (error) {
-      console.error('❌ Logout failed:', error);
-    } finally {
-      setUser(null);
-      setAccessToken(null);
-      setError(null);
-      localStorage.removeItem('accessToken');
-      setIsLoading(false);
+      console.error('Error refreshing token:', error);
+      clearAuthState();
+      return false;
     }
-  };
+  }, [client]);
 
-  // Initialize auth on mount
+  // Initialize auth on app load by trying to refresh token (only if we had a previous session)
   useEffect(() => {
     const initializeAuth = async () => {
-      console.log('🚀 Initializing auth...');
+      // Only try to refresh if we had a previous session
+      const hasSession = sessionStorage.getItem('hasSession');
 
-      // Debug initial state
-      debugCookies();
-
-      const storedToken = localStorage.getItem('accessToken');
-
-      if (storedToken && !isTokenExpired(storedToken)) {
-        console.log('✅ Using valid stored token');
-        setAccessToken(storedToken);
-        updateUserFromToken(storedToken);
+      if (hasSession) {
+        setIsLoading(true);
+        const success = await refreshToken();
+        if (!success) {
+          // If refresh fails, clear the session flag
+          sessionStorage.removeItem('hasSession');
+        }
         setIsLoading(false);
-        return;
       }
-
-      // Try to refresh token (HttpOnly cookie will be sent automatically)
-      console.log('🔄 Attempting initial token refresh...');
-      const success = await refreshToken();
-
-      if (!success) {
-        console.log('❌ No valid session found');
-      }
-
-      setIsLoading(false);
     };
 
     initializeAuth();
   }, []);
 
-  // Auto-refresh token before expiry
-  useEffect(() => {
-    if (!accessToken) return;
+  // Helper to update both reactive vars and local state together on signin
+  const updateAuthState = (token: string, userData: User) => {
+    console.log('Updating auth state with:', {
+      token: token.substring(0, 20) + '...',
+      userData,
+    });
 
-    const checkTokenExpiry = () => {
-      if (isTokenExpired(accessToken)) {
-        console.log('🔄 Token expiring, refreshing...');
-        refreshToken();
+    // Store only in Apollo reactive variables (memory)
+    accessTokenVar(token);
+    userVar(userData);
+    isAuthenticatedVar(true);
+
+    setUser(userData);
+    setIsAuthenticated(true);
+
+    // Set a flag that we have had a successful login
+    sessionStorage.setItem('hasSession', 'true');
+    console.log('Set hasSession flag to true');
+  };
+
+  // Signin mutation and update auth state, with loading and error handling
+  const signin = useCallback(
+    async (input: SigninInput) => {
+      setIsLoading(true);
+      try {
+        const { data } = await client.mutate({
+          mutation: SIGNIN_MUTATION,
+          variables: { signinInput: input },
+        });
+
+        if (data?.signin?.accessToken && data?.signin?.user) {
+          updateAuthState(data.signin.accessToken, data.signin.user);
+        } else {
+          throw new Error('Missing user or token in signin response');
+        }
+      } catch (error) {
+        throw error;
+      } finally {
+        setIsLoading(false);
       }
-    };
+    },
+    [client]
+  );
 
-    const interval = setInterval(checkTokenExpiry, 2 * 60 * 1000); // Check every 2 minutes
-    return () => clearInterval(interval);
-  }, [accessToken]);
-
+  // Provide auth state and actions through Context
   return (
     <AuthContext.Provider
       value={{
         user,
-        accessToken,
-        isAuthenticated: Boolean(
-          user && accessToken && !isTokenExpired(accessToken, 0)
-        ),
+        isAuthenticated,
         isLoading,
-        error,
         signin,
-        logout,
-        refreshToken,
       }}
     >
       {children}
@@ -321,10 +169,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
+// Hook to consume auth context safely, throws if used outside provider
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

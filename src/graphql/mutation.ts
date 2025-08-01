@@ -33,8 +33,8 @@ export const SIGNUP_MUTATION = gql`
 `;
 
 export const REFRESH_TOKEN_MUTATION = gql`
-  mutation RefreshToken {
-    refreshTokens {
+  mutation RefreshAccessToken {
+    refreshAccessToken {
       accessToken
     }
   }
