@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
-import { ROUTES } from '../../constants/routes/Routes';
 import { AuthSuccess, Dashboard, Home, Signin, Signup } from '../../pages';
 import { ProtectedRoute } from '../protected-route';
+import { ROUTES } from '../../constants';
 
 export const AppRoutes = () => {
   return (

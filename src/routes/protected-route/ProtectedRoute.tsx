@@ -1,4 +1,3 @@
-import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../providers/auth-provider';
 import { getAccessToken } from '../../utils/token.utils';
@@ -15,7 +14,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, isLoading, isInitializing, user } = useAuth();
   const location = useLocation();
 
-  // Show loading during initial auth check or general loading
   if (isInitializing || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -29,11 +27,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Check if we have a token but auth state hasn't been updated yet
-  // This handles the edge case during page refresh
   const hasToken = getAccessToken();
   if (hasToken && !isAuthenticated && !isInitializing) {
-    // We have a token but auth state isn't ready, show loading
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">
@@ -44,13 +39,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Redirect to signin if not authenticated
   if (!isAuthenticated) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // For role-based access, we need user data
-  // If we're authenticated but don't have user data yet, show loading
   if (requiredRole && !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -62,11 +54,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Check role-based access if required
   if (requiredRole && user && user.role !== requiredRole) {
     return <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 
-  // Render the protected content
   return <Outlet />;
 };

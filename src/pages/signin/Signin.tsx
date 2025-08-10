@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../providers/auth-provider';
-import { ROUTES } from '../../constants/routes/Routes';
+import { ROUTES } from '../../constants/routes';
 
 export const Signin = () => {
   const [formData, setFormData] = useState({
