@@ -1,6 +1,5 @@
 import { makeVar } from '@apollo/client';
 
-// Store only in memory - no localStorage
-export const accessTokenVar = makeVar<string>('');
+// Only store user data and auth state - no tokens!
 export const userVar = makeVar<any | null>(null);
 export const isAuthenticatedVar = makeVar<boolean>(false);

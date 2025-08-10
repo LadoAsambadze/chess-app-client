@@ -3,15 +3,22 @@ import { gql } from '@apollo/client';
 export const SIGNIN_MUTATION = gql`
   mutation Signin($signinInput: SigninRequest!) {
     signin(signinInput: $signinInput) {
+      accessToken
       user {
-        id
+        avatar
+        createdAt
         email
         firstname
+        id
+        isActive
+        isVerified
+        lastLogin
         lastname
-        avatar
+        method
+        phone
         role
+        updatedAt
       }
-      accessToken
     }
   }
 `;
@@ -27,15 +34,29 @@ export const SIGNUP_MUTATION = gql`
         avatar
         role
       }
-      accessToken
     }
   }
 `;
 
 export const REFRESH_TOKEN_MUTATION = gql`
-  mutation RefreshAccessToken {
-    refreshAccessToken {
+  mutation RefreshToken {
+    refreshToken {
       accessToken
+      user {
+        avatar
+        createdAt
+        email
+        firstname
+        id
+        isActive
+        isVerified
+        lastLogin
+        lastname
+        method
+        phone
+        role
+        updatedAt
+      }
     }
   }
 `;
@@ -48,7 +69,6 @@ export const LOGOUT_MUTATION = gql`
   }
 `;
 
-// Optional: Query to get current user info
 export const GET_CURRENT_USER = gql`
   query GetCurrentUser {
     me {
@@ -58,6 +78,8 @@ export const GET_CURRENT_USER = gql`
       lastname
       avatar
       role
+      isActive
+      isVerified
     }
   }
 `;

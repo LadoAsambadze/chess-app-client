@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../providers/auth-provider'; // ensure correct import path
-import { ROUTES } from '../../constants/routes/Routes'; // adjust import path if needed
+import { useAuth } from '../../providers/auth-provider';
+import { ROUTES } from '../../constants/routes/Routes';
 
 export const Signin = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,6 @@ export const Signin = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get redirect path (default to dashboard)
   const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
 
   const validateForm = (): boolean => {
@@ -63,8 +62,7 @@ export const Signin = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    setAuthError(null); // Clear previous auth errors
+    setAuthError(null);
 
     if (!validateForm()) return;
 
@@ -74,10 +72,10 @@ export const Signin = () => {
         password: formData.password,
       });
 
-      // On success, navigate to intended page
+      // Navigate to intended page on success
       navigate(from, { replace: true });
     } catch (error: any) {
-      // AuthProvider throws an error on signin mutation failure
+      console.error('Signin error:', error);
       setAuthError(error.message || 'Failed to sign in');
 
       // Clear password field for security

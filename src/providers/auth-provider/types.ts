@@ -3,10 +3,9 @@ import type { ReactNode } from 'react';
 export interface User {
   id: string;
   email: string;
-  firstname: string;
-  lastname: string;
-  avatar?: string;
+  name?: string;
   role: string;
+  // Add other user properties as needed
 }
 
 export interface SigninInput {
@@ -14,21 +13,25 @@ export interface SigninInput {
   password: string;
 }
 
-export interface SignupInput {
-  email: string;
-  password: string;
-  firstname: string;
-  lastname: string;
+export interface SigninResponse {
+  user: User;
+  accessToken: string;
+  // refreshToken is handled via HTTP-only cookies
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  user: User;
 }
 
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
   signin: (input: SigninInput) => Promise<void>;
-  signup: (input: SignupInput) => Promise<void>;
   logout: () => Promise<void>;
-  refreshToken: () => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
 }
 
 export interface AuthProviderProps {

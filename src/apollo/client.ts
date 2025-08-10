@@ -4,9 +4,9 @@ import {
   createHttpLink,
   from,
 } from '@apollo/client';
-import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
-import { accessTokenVar } from './store';
+import { setContext } from '@apollo/client/link/context';
+import { getAccessToken } from '../utils/token.utils';
 
 const httpLink = createHttpLink({
   uri: 'http://localhost:4000/graphql',
@@ -14,11 +14,12 @@ const httpLink = createHttpLink({
 });
 
 const authLink = setContext((_, { headers }) => {
-  const token = accessTokenVar();
+  const accessToken = getAccessToken();
+
   return {
     headers: {
       ...headers,
-      ...(token && { authorization: `Bearer ${token}` }),
+      ...(accessToken && { authorization: `Bearer ${accessToken}` }),
     },
   };
 });
@@ -29,17 +30,14 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
       console.error(`GraphQL error: ${message}`);
 
       if (extensions?.code === 'UNAUTHENTICATED') {
-        accessTokenVar('');
         window.dispatchEvent(new CustomEvent('auth-error'));
       }
     });
   }
-
   if (networkError) {
     console.error('Network error:', networkError);
 
     if ('statusCode' in networkError && networkError.statusCode === 401) {
-      accessTokenVar('');
       window.dispatchEvent(new CustomEvent('auth-error'));
     }
   }
@@ -48,6 +46,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 export const apolloClient = new ApolloClient({
   link: from([errorLink, authLink, httpLink]),
   cache: new InMemoryCache(),
+  credentials: 'include',
   defaultOptions: {
     watchQuery: { errorPolicy: 'all' },
     query: { errorPolicy: 'all' },
