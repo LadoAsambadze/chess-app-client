@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { setAccessToken } from '../../utils/token.utils'; // Adjust path as needed
 
 export function AuthSuccess() {
   const [isProcessing, setIsProcessing] = useState(true);
-  const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate getting token from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const authToken = urlParams.get('token');
 
@@ -18,25 +22,25 @@ export function AuthSuccess() {
     }
 
     try {
-      // Store the token in component state
-      setToken(authToken);
+      // Use your token utility function to save the token
+      setAccessToken(authToken);
 
-      // Decode the JWT to get user info
+      // Decode token payload (assuming JWT)
       const payload = JSON.parse(atob(authToken.split('.')[1]));
       const userData = {
         id: payload.sub,
         email: payload.email,
         role: payload.role,
       };
-      setUser(userData);
+      // You can do something with userData here if needed
+      // For example, set in some global context or local state
 
-      // Simulate a brief processing time for better UX
+      // Simulate processing delay for UX
       setTimeout(() => {
         setIsProcessing(false);
-        // Auto-redirect simulation after 2 seconds
         setTimeout(() => {
           console.log('Would redirect to dashboard now');
-          // In a real app: window.location.href = "/dashboard"
+          // window.location.href = '/dashboard';
         }, 2000);
       }, 1000);
     } catch (err) {
@@ -48,192 +52,105 @@ export function AuthSuccess() {
 
   const handleBackToLogin = () => {
     console.log('Would redirect to login');
-    // In a real app: window.location.href = "/login"
+    // window.location.href = '/login';
   };
 
   const handleContinueToDashboard = () => {
     console.log('Would redirect to dashboard');
-    // In a real app: window.location.href = "/dashboard"
+    // window.location.href = '/dashboard';
   };
 
   if (error) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f9fafb',
-          padding: '1rem',
-        }}
+      <Box
+        minHeight="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bgcolor="#f9fafb"
+        p={2}
       >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '28rem',
-            backgroundColor: 'white',
-            borderRadius: '0.5rem',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            padding: '1.5rem',
-          }}
+        <Box
+          maxWidth={448}
+          width="100%"
+          bgcolor="background.paper"
+          borderRadius={2}
+          boxShadow={3}
+          p={3}
+          textAlign="center"
         >
-          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            <h2
-              style={{
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                color: '#dc2626',
-                margin: '0 0 0.5rem 0',
-              }}
-            >
-              Authentication Error
-            </h2>
-            <p
-              style={{
-                color: '#6b7280',
-                margin: 0,
-              }}
-            >
-              {error}
-            </p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <button
-              onClick={handleBackToLogin}
-              style={{
-                width: '100%',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                padding: '0.5rem 1rem',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = '#2563eb')}
-              onMouseOut={(e) => (e.target.style.backgroundColor = '#3b82f6')}
-            >
-              Back to Login
-            </button>
-          </div>
-        </div>
-      </div>
+          <ErrorOutlineIcon sx={{ fontSize: 48, color: 'error.main', mb: 1 }} />
+          <Typography variant="h5" color="error" fontWeight="bold" gutterBottom>
+            Authentication Error
+          </Typography>
+          <Typography color="text.secondary" mb={3}>
+            {error}
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={handleBackToLogin}
+          >
+            Back to Login
+          </Button>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f9fafb',
-        padding: '1rem',
-      }}
+    <Box
+      minHeight="100vh"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bgcolor="#f9fafb"
+      p={2}
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '28rem',
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-          padding: '1.5rem',
-        }}
+      <Box
+        maxWidth={448}
+        width="100%"
+        bgcolor="background.paper"
+        borderRadius={2}
+        boxShadow={3}
+        p={3}
+        textAlign="center"
       >
-        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-          <div style={{ marginBottom: '1rem' }}>
-            {isProcessing ? (
-              <div
-                style={{
-                  width: '3rem',
-                  height: '3rem',
-                  margin: '0 auto',
-                  border: '3px solid #e5e7eb',
-                  borderTop: '3px solid #3b82f6',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite',
-                }}
-              ></div>
-            ) : (
-              <div
-                style={{
-                  width: '3rem',
-                  height: '3rem',
-                  margin: '0 auto',
-                  backgroundColor: '#10b981',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                }}
-              >
-                ✓
-              </div>
-            )}
-          </div>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              color: isProcessing ? '#3b82f6' : '#10b981',
-              margin: '0 0 0.5rem 0',
-            }}
-          >
-            {isProcessing ? 'Processing...' : 'Authentication Successful!'}
-          </h2>
-          <p
-            style={{
-              color: '#6b7280',
-              margin: 0,
-            }}
-          >
-            {isProcessing
-              ? 'Please wait while we set up your account...'
-              : 'You will be redirected to your dashboard shortly.'}
-          </p>
-        </div>
+        <Box mb={2}>
+          {isProcessing ? (
+            <CircularProgress size={48} color="primary" />
+          ) : (
+            <CheckCircleIcon
+              sx={{ fontSize: 48, color: 'success.main', mx: 'auto' }}
+            />
+          )}
+        </Box>
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          color={isProcessing ? 'primary.main' : 'success.main'}
+          gutterBottom
+        >
+          {isProcessing ? 'Processing...' : 'Authentication Successful!'}
+        </Typography>
+        <Typography color="text.secondary" mb={3}>
+          {isProcessing
+            ? 'Please wait while we set up your account...'
+            : 'You will be redirected to your dashboard shortly.'}
+        </Typography>
+
         {!isProcessing && (
-          <div style={{ textAlign: 'center' }}>
-            <button
-              onClick={handleContinueToDashboard}
-              style={{
-                width: '100%',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                padding: '0.5rem 1rem',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseOver={(e) => (e.target.style.backgroundColor = '#2563eb')}
-              onMouseOut={(e) => (e.target.style.backgroundColor = '#3b82f6')}
-            >
-              Continue to Dashboard
-            </button>
-          </div>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={handleContinueToDashboard}
+          >
+            Continue to Dashboard
+          </Button>
         )}
-      </div>
-      <style jsx>{`
-        @keyframes spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
+      </Box>
+    </Box>
   );
 }

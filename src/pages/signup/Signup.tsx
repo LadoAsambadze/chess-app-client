@@ -103,28 +103,22 @@ export function Signup() {
         credentials: 'include',
         body: JSON.stringify({
           query: `
-            mutation Signup($input: SignupRequest!) {
-              signup(signupInput: $input) {
-                user {
-                  id
+                mutation Signup($signupInput: SignupRequest!) {
+                signup(signupInput: $signupInput) {
                   email
-                  firstname
-                  lastname
-                  avatar
-                  role
-                  method
+                  message
+                  success
+                  userId
                 }
-                accessToken
-              }
-            }
+      }
           `,
           variables: {
-            input: {
+            signupInput: {
               firstname: formData.firstname,
               lastname: formData.lastname,
               email: formData.email,
               password: formData.password,
-              phone: formData.phone.trim() || undefined,
+              phone: formData.phone?.trim() || undefined,
             },
           },
         }),

@@ -1,4 +1,5 @@
 import { useApolloClient } from '@apollo/client';
+import { useRef } from 'react';
 import {
   GET_CURRENT_USER,
   LOGOUT_MUTATION,
@@ -12,50 +13,77 @@ import type { SigninInput } from '../types/SigninInput';
 export const useAuthMutations = () => {
   const client = useApolloClient();
 
+  // Prevent multiple concurrent refresh attempts
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
+  const validatePromiseRef = useRef<Promise<boolean> | null>(null);
+
   const refreshAccessToken = async (): Promise<boolean> => {
-    try {
-      const { data } = await client.mutate({
-        mutation: REFRESH_TOKEN_MUTATION,
-        errorPolicy: 'all',
-        fetchPolicy: 'no-cache',
-      });
-
-      if (data?.refreshToken?.accessToken) {
-        setAccessToken(data.refreshToken.accessToken);
-
-        if (data.refreshToken.user) {
-          userVar(data.refreshToken.user);
-          isAuthenticatedVar(true);
-        }
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('❌ Token refresh failed:', error);
-      return false;
+    // Return existing promise if refresh is already in progress
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
     }
+
+    refreshPromiseRef.current = (async () => {
+      try {
+        const { data } = await client.mutate({
+          mutation: REFRESH_TOKEN_MUTATION,
+          errorPolicy: 'all',
+          fetchPolicy: 'no-cache',
+        });
+
+        if (data?.refreshToken?.accessToken) {
+          setAccessToken(data.refreshToken.accessToken);
+
+          if (data.refreshToken.user) {
+            userVar(data.refreshToken.user);
+            isAuthenticatedVar(true);
+          }
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error);
+        return false;
+      } finally {
+        // Clear the promise reference when done
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    return refreshPromiseRef.current;
   };
 
   const validateAccessToken = async (): Promise<boolean> => {
-    try {
-      const { data } = await client.query({
-        query: GET_CURRENT_USER,
-        errorPolicy: 'all',
-        fetchPolicy: 'network-only',
-      });
-
-      if (data?.me) {
-        userVar(data.me);
-        isAuthenticatedVar(true);
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Access token validation failed:', error);
-      return false;
+    // Return existing promise if validation is already in progress
+    if (validatePromiseRef.current) {
+      return validatePromiseRef.current;
     }
+
+    validatePromiseRef.current = (async () => {
+      try {
+        const { data, error } = await client.query({
+          query: GET_CURRENT_USER,
+          errorPolicy: 'all',
+          fetchPolicy: 'network-only', // Force fresh validation
+          notifyOnNetworkStatusChange: false, // Prevent extra loading states
+        });
+
+        if (data?.me && !error) {
+          userVar(data.me);
+          isAuthenticatedVar(true);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Access token validation failed:', error);
+        return false;
+      } finally {
+        // Clear the promise reference when done
+        validatePromiseRef.current = null;
+      }
+    })();
+
+    return validatePromiseRef.current;
   };
 
   const signin = async (input: SigninInput) => {

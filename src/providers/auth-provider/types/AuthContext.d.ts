@@ -6,6 +6,7 @@ export interface AuthContextType {
   isLoading: boolean;
   isInitializing: boolean;
   signin: (input: SigninInput) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<boolean>;
+  refreshAccessToken: () => Promise<any>;
 }

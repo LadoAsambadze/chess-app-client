@@ -1,38 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useApolloClient } from '@apollo/client';
- 
+import { useState, useEffect, useRef } from 'react';
+
 import { useAuthMutations } from './useAuthMutations';
 import { getAccessToken, removeAccessToken } from '../../../utils/token.utils';
 import { isAuthenticatedVar, userVar } from '../../../apollo/store';
 
 export const useAuthInitialization = () => {
-  const client = useApolloClient();
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
   const { validateAccessToken, refreshAccessToken } = useAuthMutations();
+  const initializationRef = useRef(false); // Prevent multiple initializations
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
     const initializeAuth = async () => {
       try {
         const accessToken = getAccessToken();
 
         if (accessToken) {
-          // Access token exists, validate it
+          // First try to validate existing token
           const isValid = await validateAccessToken();
 
+
+        
+
           if (!isValid) {
-            // Access token is invalid, try to refresh
             console.log('Access token invalid, attempting refresh...');
             const refreshed = await refreshAccessToken();
 
             if (!refreshed) {
-              // Refresh failed, clear auth state
+              console.log('Refresh failed, clearing auth state');
               removeAccessToken();
               userVar(null);
               isAuthenticatedVar(false);
             }
           }
         } else {
-          // No access token - do NOT call refreshAccessToken
+          // No access token, set unauthenticated state
           userVar(null);
           isAuthenticatedVar(false);
         }
@@ -47,7 +52,7 @@ export const useAuthInitialization = () => {
     };
 
     initializeAuth();
-  }, [client, validateAccessToken, refreshAccessToken]);
+  }, []); // Remove dependencies to prevent re-runs
 
   return isInitializing;
 };

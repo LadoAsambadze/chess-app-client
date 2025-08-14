@@ -26,14 +26,10 @@ export const SIGNIN_MUTATION = gql`
 export const SIGNUP_MUTATION = gql`
   mutation Signup($signupInput: SignupRequest!) {
     signup(signupInput: $signupInput) {
-      user {
-        id
-        email
-        firstname
-        lastname
-        avatar
-        role
-      }
+      email
+      message
+      success
+      userId
     }
   }
 `;
