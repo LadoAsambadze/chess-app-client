@@ -1,418 +1,244 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Mail, Lock, LogIn } from 'lucide-react';
+import { ROUTES } from '../../constants/routes';
 import {
-  Link,
   useNavigate,
+  Link,
   useLocation,
   useSearchParams,
 } from 'react-router-dom';
-import {
-  Box,
-  CardContent,
-  TextField,
-  Typography,
-  Alert,
-  Container,
-  Divider,
-  IconButton,
-  InputAdornment,
-  Stack,
-  Paper,
-  useTheme,
-  alpha,
-} from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  Email,
-  Lock,
-  Login,
-  Google,
-} from '@mui/icons-material';
-import { Button } from '../../components/ui/Button';
-import { useAuth } from '../../providers/auth-provider';
-import { ROUTES } from '../../constants/routes';
+import { useAuth } from '../../hooks/useAuth';
+
+// Google Icon Component (since Lucide doesn't have Google icon)
+const GoogleIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24">
+    <path
+      fill="currentColor"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="currentColor"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="currentColor"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+    />
+    <path
+      fill="currentColor"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+    />
+  </svg>
+);
 
 export const Signin = () => {
-  const theme = useTheme();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [validationErrors, setValidationErrors] = useState<{
-    [key: string]: string;
-  }>({});
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { signin, isLoading, loginWithToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
+  const { mutate: signIn, isLoading, error } = useAuth();
 
-  // Handle Google OAuth callback
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   useEffect(() => {
-    const handleGoogleCallback = async () => {
-      const token = searchParams.get('token');
-      const error = searchParams.get('message');
+    const token = searchParams.get('token');
+    const error = searchParams.get('message');
 
-      if (error) {
-        setAuthError(decodeURIComponent(error));
-        // Clean URL
-        navigate(location.pathname, { replace: true });
-        return;
-      }
-
-      if (token) {
-        try {
-          // If your auth provider has a method to login with token
-          await loginWithToken?.(token);
-          navigate(from, { replace: true });
-        } catch (err: any) {
-          setAuthError(err.message || 'Google authentication failed');
-        }
-        // Clean URL
-        navigate(location.pathname, { replace: true });
-      }
-    };
-
-    // Check if we're on auth success/error route
-    if (
-      location.pathname.includes('/auth/success') ||
-      location.pathname.includes('/auth/error')
-    ) {
-      handleGoogleCallback();
-    }
-  }, [searchParams, navigate, location, from, loginWithToken]);
-
-  const validateForm = (): boolean => {
-    const errors: { [key: string]: string } = {};
-
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
+    if (error) {
+      setAuthError(decodeURIComponent(error));
+      navigate(location.pathname, { replace: true });
+      return;
     }
 
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+    if (token) {
+      localStorage.setItem('accessToken', token);
+      navigate(ROUTES.DASHBOARD, { replace: true });
     }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  }, [searchParams, navigate, location]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
-
-    // Clear auth error on any input change
-    if (authError) {
-      setAuthError(null);
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (authError) setAuthError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-
-    if (!validateForm()) return;
-
-    try {
-      await signin({
-        email: formData.email.trim(),
-        password: formData.password,
-      });
-
-      // Navigate to intended page on success
-      navigate(from, { replace: true });
-    } catch (error: any) {
-      console.error('Signin error:', error);
-      setAuthError(error.message || 'Failed to sign in');
-
-      // Clear password field for security
-      setFormData((prev) => ({ ...prev, password: '' }));
-    }
-  };
-
-  const handleGoogleSignin = async () => {
-    setAuthError(null);
+  const handleGoogleSignin = () => {
     setGoogleLoading(true);
-
-    try {
-      // Get your backend API URL from environment or config
-      const backendUrl = 'http://localhost:4000';
-
-      // Redirect to Google OAuth endpoint
-      window.location.href = `${backendUrl}/auth/google`;
-    } catch (error: any) {
-      console.error('Google signin error:', error);
-      setAuthError('Failed to initiate Google sign in');
-      setGoogleLoading(false);
-    }
+    window.location.href = 'http://localhost:4000/auth/google';
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.email || !formData.password) return;
+
+    setAuthError(null);
+    signIn(
+      { email: formData.email.trim(), password: formData.password },
+      {
+        onSuccess: () => {
+          navigate(ROUTES.DASHBOARD, { replace: true });
+        },
+        onError: (err: any) => {
+          setAuthError(err?.message || 'Failed to sign in');
+          setFormData((prev) => ({ ...prev, password: '' }));
+        },
+      }
+    );
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: `linear-gradient(135deg, ${alpha(
-          theme.palette.primary.main,
-          0.1
-        )} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        py: 3,
-      }}
-    >
-      <Container maxWidth="sm">
-        <Paper
-          elevation={10}
-          sx={{
-            borderRadius: 3,
-            overflow: 'hidden',
-            background: alpha(theme.palette.background.paper, 0.95),
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          <Box
-            sx={{
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              color: 'white',
-              py: 4,
-              textAlign: 'center',
-            }}
-          >
-            <Login sx={{ fontSize: 48, mb: 2 }} />
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              Welcome Back
-            </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.9, mt: 1 }}>
-              Sign in to your account
-            </Typography>
-          </Box>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="bg-white shadow-lg rounded-lg p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100 mb-4">
+              <LogIn className="h-8 w-8 text-blue-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">Sign In</h1>
+          </div>
 
-          <CardContent sx={{ p: 4 }}>
-            {authError && (
-              <Alert
-                severity="error"
-                sx={{ mb: 3, borderRadius: 2 }}
-                onClose={() => setAuthError(null)}
-              >
-                {authError}
-              </Alert>
-            )}
+          {/* Error Alert */}
+          {(authError || error) && (
+            <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">
+                    {authError || (error as Error).message}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Google Sign In Button */}
-            <Button
-              fullWidth
-              variant="outlined"
-              size="large"
+            <button
+              type="button"
               onClick={handleGoogleSignin}
-              loading={googleLoading}
               disabled={isLoading || googleLoading}
-              startIcon={<Google />}
-              sx={{
-                py: 1.5,
-                borderRadius: 2,
-                textTransform: 'none',
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                borderColor: '#db4437',
-                color: '#db4437',
-                mb: 3,
-                '&:hover': {
-                  borderColor: '#c23321',
-                  backgroundColor: alpha('#db4437', 0.04),
-                  transform: 'translateY(-2px)',
-                  boxShadow: theme.shadows[4],
-                },
-                '&:disabled': {
-                  borderColor: theme.palette.action.disabled,
-                  color: theme.palette.action.disabled,
-                },
-                transition: 'all 0.3s ease-in-out',
-              }}
+              className="w-full flex justify-center items-center px-4 py-3 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {googleLoading ? 'Redirecting...' : 'Continue with Google'}
-            </Button>
+              {googleLoading ? (
+                <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-3" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span className="ml-3">Continue with Google</span>
+            </button>
 
-            <Divider sx={{ mb: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                OR
-              </Typography>
-            </Divider>
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">OR</span>
+              </div>
+            </div>
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <Stack spacing={3}>
-                <TextField
-                  fullWidth
+            {/* Email Input */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Email
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
                   id="email"
                   name="email"
-                  label="Email Address"
                   type="email"
-                  autoComplete="email"
+                  required
                   value={formData.email}
                   onChange={handleInputChange}
-                  error={!!validationErrors.email}
-                  helperText={validationErrors.email}
-                  disabled={isLoading || googleLoading}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Email color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                    },
-                  }}
+                  disabled={isLoading}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                  placeholder="Enter your email"
                 />
+              </div>
+            </div>
 
-                <TextField
-                  fullWidth
+            {/* Password Input */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
                   id="password"
                   name="password"
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  type="password"
+                  required
                   value={formData.password}
                   onChange={handleInputChange}
-                  error={!!validationErrors.password}
-                  helperText={validationErrors.password}
-                  disabled={isLoading || googleLoading}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={togglePasswordVisibility}
-                          edge="end"
-                          disabled={isLoading || googleLoading}
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                    },
-                  }}
+                  disabled={isLoading}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                  placeholder="Enter your password"
                 />
+              </div>
+            </div>
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  loading={isLoading}
-                  disabled={isLoading || googleLoading}
-                  loadingPosition="start"
-                  startIcon={<Login />}
-                  sx={{
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                    '&:hover': {
-                      background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-                      transform: 'translateY(-2px)',
-                      boxShadow: theme.shadows[8],
-                    },
-                    '&:disabled': {
-                      background: theme.palette.action.disabled,
-                    },
-                    transition: 'all 0.3s ease-in-out',
-                  }}
-                >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </Stack>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading || !formData.email || !formData.password}
+              className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
 
-              <Box sx={{ mt: 3, textAlign: 'center' }}>
-                <Typography
-                  component={Link}
-                  to="/forgot-password"
-                  variant="body2"
-                  sx={{
-                    color: theme.palette.primary.main,
-                    textDecoration: 'none',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Forgot your password?
-                </Typography>
-              </Box>
-
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  OR
-                </Typography>
-              </Divider>
-
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Don't have an account?{' '}
-                  <Typography
-                    component={Link}
-                    to={ROUTES.SIGNUP}
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.primary.main,
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
-                  >
-                    Create one now
-                  </Typography>
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Paper>
-
-        <Box sx={{ textAlign: 'center', mt: 3 }}>
-          <Typography variant="body2" color="text.secondary">
-            © 2025 Your Company. All rights reserved.
-          </Typography>
-        </Box>
-      </Container>
-    </Box>
+          {/* Sign Up Link */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link
+                to={ROUTES.SIGNUP}
+                className="font-medium text-blue-600 hover:text-blue-500 hover:underline focus:outline-none focus:underline transition-colors duration-200"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };

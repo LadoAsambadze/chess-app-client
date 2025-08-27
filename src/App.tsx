@@ -1,12 +1,11 @@
-import { ApolloProvider } from '@apollo/client';
-import { apolloClient } from './apollo/client';
-import { RouterProvider } from './providers';
+import { QueryProvider } from './providers/query-provider/QueryProvider';
+import { RouterProvider } from './providers/router-provider';
 
 function App() {
   return (
-    <ApolloProvider client={apolloClient}>
+    <QueryProvider>
       <RouterProvider />
-    </ApolloProvider>
+    </QueryProvider>
   );
 }
 

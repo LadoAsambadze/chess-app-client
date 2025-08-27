@@ -1,12 +1,11 @@
-import type { User } from '../types';
-
+// types/AuthContext.ts
 export interface AuthContextType {
-  user: User | null;
+  user: any; // Replace with your user type
   isAuthenticated: boolean;
   isLoading: boolean;
-  isInitializing: boolean;
+  isInitialized: boolean;
+  initializeAuth: () => Promise<void>;
   signin: (input: SigninInput) => Promise<void>;
-  loginWithToken: (token: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<any>;
+  refreshToken: () => Promise<boolean>;
 }
