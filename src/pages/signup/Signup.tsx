@@ -1,4 +1,3 @@
-import type React from 'react';
 import { useState, useEffect } from 'react';
 import {
   Link,
@@ -18,9 +17,14 @@ import {
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useSignUp } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
+import {
+  signupSchema,
+  type SignupFormData,
+} from '../../schemas/auth/signup.schema';
 
 // Google Icon Component
 const GoogleIcon = () => (
@@ -44,30 +48,33 @@ const GoogleIcon = () => (
   </svg>
 );
 
-interface SignupFormData {
-  firstname: string;
-  lastname: string;
-  email: string;
-  password: string;
-  phone: string;
-}
-
 export const Signup = () => {
-  const [formData, setFormData] = useState<SignupFormData>({
-    firstname: '',
-    lastname: '',
-    email: '',
-    password: '',
-    phone: '',
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+    reset,
+    clearErrors,
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    mode: 'onChange',
+    defaultValues: {
+      firstname: '',
+      lastname: '',
+      email: '',
+      password: '',
+      phone: '',
+    },
   });
-  const [validationErrors, setValidationErrors] = useState<{
-    [key: string]: string;
-  }>({});
+
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const watchedPassword = watch('password');
 
   const { mutate: signUp, isLoading, error } = useSignUp();
   const navigate = useNavigate();
@@ -109,6 +116,15 @@ export const Signup = () => {
     }
   }, [error]);
 
+  // Update password strength when password changes
+  useEffect(() => {
+    if (watchedPassword) {
+      setPasswordStrength(validatePassword(watchedPassword));
+    } else {
+      setPasswordStrength(0);
+    }
+  }, [watchedPassword]);
+
   const validatePassword = (password: string): number => {
     let strength = 0;
     if (password.length >= 8) strength++;
@@ -119,89 +135,23 @@ export const Signup = () => {
     return strength;
   };
 
-  const validateForm = (): boolean => {
-    const errors: { [key: string]: string } = {};
-
-    if (!formData.firstname.trim()) {
-      errors.firstname = 'First name is required';
-    }
-
-    if (!formData.lastname.trim()) {
-      errors.lastname = 'Last name is required';
-    }
-
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters long';
-    }
-
-    if (
-      formData.phone &&
-      !/^[+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))
-    ) {
-      errors.phone = 'Please enter a valid phone number';
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (name === 'password') {
-      setPasswordStrength(validatePassword(value));
-    }
-
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
-
-    if (authError) {
-      setAuthError(null);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: SignupFormData) => {
+    console.log('Form Data:', data);
     setAuthError(null);
     setAuthSuccess(null);
 
-    if (!validateForm()) return;
-
     signUp(
       {
-        firstname: formData.firstname.trim(),
-        lastname: formData.lastname.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        phone: formData.phone?.trim() || undefined,
+        firstname: data.firstname.trim(),
+        lastname: data.lastname.trim(),
+        email: data.email.trim(),
+        password: data.password,
+        phone: data.phone?.trim() || undefined,
       },
       {
         onSuccess: () => {
           setAuthSuccess('Account created successfully! You can now sign in.');
-          setFormData({
-            firstname: '',
-            lastname: '',
-            email: '',
-            password: '',
-            phone: '',
-          });
+          reset();
           setPasswordStrength(0);
 
           setTimeout(() => {
@@ -232,6 +182,15 @@ export const Signup = () => {
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleInputFocus = (fieldName: keyof SignupFormData) => {
+    if (authError) {
+      setAuthError(null);
+    }
+    if (errors[fieldName]) {
+      clearErrors(fieldName);
+    }
   };
 
   const getPasswordStrengthText = (): string => {
@@ -361,7 +320,7 @@ export const Signup = () => {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Name Fields Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -377,24 +336,22 @@ export const Signup = () => {
                     </div>
                     <input
                       id="firstname"
-                      name="firstname"
                       type="text"
                       autoComplete="given-name"
-                      required
-                      value={formData.firstname}
-                      onChange={handleInputChange}
+                      {...register('firstname')}
+                      onFocus={() => handleInputFocus('firstname')}
                       disabled={isLoading || googleLoading}
                       className={`block w-full pl-10 pr-3 py-3 border ${
-                        validationErrors.firstname
+                        errors.firstname
                           ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                           : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                       } rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200`}
                       placeholder="Enter your first name"
                     />
                   </div>
-                  {validationErrors.firstname && (
+                  {errors.firstname && (
                     <p className="mt-1 text-sm text-red-600">
-                      {validationErrors.firstname}
+                      {errors.firstname.message}
                     </p>
                   )}
                 </div>
@@ -412,24 +369,22 @@ export const Signup = () => {
                     </div>
                     <input
                       id="lastname"
-                      name="lastname"
                       type="text"
                       autoComplete="family-name"
-                      required
-                      value={formData.lastname}
-                      onChange={handleInputChange}
+                      {...register('lastname')}
+                      onFocus={() => handleInputFocus('lastname')}
                       disabled={isLoading || googleLoading}
                       className={`block w-full pl-10 pr-3 py-3 border ${
-                        validationErrors.lastname
+                        errors.lastname
                           ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                           : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                       } rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200`}
                       placeholder="Enter your last name"
                     />
                   </div>
-                  {validationErrors.lastname && (
+                  {errors.lastname && (
                     <p className="mt-1 text-sm text-red-600">
-                      {validationErrors.lastname}
+                      {errors.lastname.message}
                     </p>
                   )}
                 </div>
@@ -449,24 +404,22 @@ export const Signup = () => {
                   </div>
                   <input
                     id="email"
-                    name="email"
                     type="email"
                     autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
+                    {...register('email')}
+                    onFocus={() => handleInputFocus('email')}
                     disabled={isLoading || googleLoading}
                     className={`block w-full pl-10 pr-3 py-3 border ${
-                      validationErrors.email
+                      errors.email
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                     } rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200`}
                     placeholder="Enter your email address"
                   />
                 </div>
-                {validationErrors.email && (
+                {errors.email && (
                   <p className="mt-1 text-sm text-red-600">
-                    {validationErrors.email}
+                    {errors.email.message}
                   </p>
                 )}
               </div>
@@ -485,23 +438,22 @@ export const Signup = () => {
                   </div>
                   <input
                     id="phone"
-                    name="phone"
                     type="tel"
                     autoComplete="tel"
-                    value={formData.phone}
-                    onChange={handleInputChange}
+                    {...register('phone')}
+                    onFocus={() => handleInputFocus('phone')}
                     disabled={isLoading || googleLoading}
                     className={`block w-full pl-10 pr-3 py-3 border ${
-                      validationErrors.phone
+                      errors.phone
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                     } rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200`}
                     placeholder="Enter your phone number"
                   />
                 </div>
-                {validationErrors.phone && (
+                {errors.phone && (
                   <p className="mt-1 text-sm text-red-600">
-                    {validationErrors.phone}
+                    {errors.phone.message}
                   </p>
                 )}
               </div>
@@ -520,15 +472,13 @@ export const Signup = () => {
                   </div>
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
-                    required
-                    value={formData.password}
-                    onChange={handleInputChange}
+                    {...register('password')}
+                    onFocus={() => handleInputFocus('password')}
                     disabled={isLoading || googleLoading}
                     className={`block w-full pl-10 pr-12 py-3 border ${
-                      validationErrors.password
+                      errors.password
                         ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                     } rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200`}
@@ -549,14 +499,14 @@ export const Signup = () => {
                     </button>
                   </div>
                 </div>
-                {validationErrors.password && (
+                {errors.password && (
                   <p className="mt-1 text-sm text-red-600">
-                    {validationErrors.password}
+                    {errors.password.message}
                   </p>
                 )}
 
                 {/* Password Strength Indicator */}
-                {formData.password && (
+                {watchedPassword && (
                   <div className="mt-2">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
