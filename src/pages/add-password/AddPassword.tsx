@@ -167,7 +167,6 @@ export function AddPassword({ userId, userEmail }: AddPasswordProps) {
           </p>
         </div>
 
-        {/* Success Message */}
         {success && (
           <div style={styles.successAlert}>
             <div style={styles.successIcon}>✓</div>
@@ -194,7 +193,6 @@ export function AddPassword({ userId, userEmail }: AddPasswordProps) {
           </div>
         </div>
 
-        {/* Add Password Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.field}>
             <label htmlFor="password" style={styles.label}>
