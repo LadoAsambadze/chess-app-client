@@ -7,7 +7,7 @@ import {
   useCurrentUser,
   useLogout,
   useRefreshToken,
-  useAuth as useSignInHook,
+  useSignin as useSignInHook,
   useSignUp,
   useTokenExpiry,
 } from '../../hooks/useAuth';
