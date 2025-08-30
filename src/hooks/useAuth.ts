@@ -3,9 +3,9 @@ import {
   getAccessToken,
   removeAccessToken,
   setAccessToken,
-} from '../../utils/token.utils';
-import type { SigninInput } from '../../providers/auth-provider/types/SigninInput';
-import { authService } from '../../services/auth.service';
+} from '../utils/token.utils';
+import type { SigninInput } from '../providers/auth-provider/types/SigninInput';
+import { authService } from '../services/auth.service';
 
 export function useSignin() {
   const queryClient = useQueryClient();

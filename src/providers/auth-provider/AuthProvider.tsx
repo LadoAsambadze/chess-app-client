@@ -10,7 +10,7 @@ import {
   useAuth as useSignInHook,
   useSignUp,
   useTokenExpiry,
-} from '../../hooks/auth-hooks/useAuth';
+} from '../../hooks/useAuth';
 
 interface AuthContextType {
   user: User | null;

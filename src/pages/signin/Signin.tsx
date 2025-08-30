@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, LogIn, BoxIcon } from 'lucide-react';
 import { ROUTES } from '../../constants/routes';
 import { useNavigate, Link } from 'react-router-dom';
-import { useSignin } from '../../hooks/auth-hooks/useAuth';
+import { useSignin } from '../../hooks/useAuth';
 
 export const Signin = () => {
   const [formData, setFormData] = useState({
@@ -176,8 +176,6 @@ export const Signin = () => {
               )}
             </button>
           </form>
-
-          {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}

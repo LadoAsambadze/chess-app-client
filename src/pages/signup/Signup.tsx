@@ -6,14 +6,14 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
-import { SignupInput } from '../../components/auth/SignupInput';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   signupSchema,
   type SignupFormData,
 } from '../../schemas/auth/signup.schema';
 import { useForm } from 'react-hook-form';
-import { useSignUp } from '../../hooks/auth-hooks/useAuth';
+import { useSignUp } from '../../hooks/useAuth';
+import { AuthInput } from '../../components/auth/AuthInput';
 
 export const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -122,7 +122,7 @@ export const Signup = () => {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignupInput
+                <AuthInput
                   id="firstname"
                   label="First Name"
                   type="text"
@@ -135,7 +135,7 @@ export const Signup = () => {
                   required
                 />
 
-                <SignupInput
+                <AuthInput
                   id="lastname"
                   label="Last Name"
                   type="text"
@@ -149,7 +149,7 @@ export const Signup = () => {
                 />
               </div>
 
-              <SignupInput
+              <AuthInput
                 id="email"
                 label="Email Address"
                 type="email"
@@ -162,7 +162,7 @@ export const Signup = () => {
                 required
               />
 
-              <SignupInput
+              <AuthInput
                 id="phone"
                 label="Phone Number"
                 type="tel"
@@ -174,7 +174,7 @@ export const Signup = () => {
                 autoComplete="tel"
               />
 
-              <SignupInput
+              <AuthInput
                 id="password"
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
@@ -200,7 +200,7 @@ export const Signup = () => {
                     <Eye className="h-4 w-4" />
                   )}
                 </Button>
-              </SignupInput>
+              </AuthInput>
 
               <Button
                 type="submit"

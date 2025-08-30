@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
-interface SignupInputProps {
+interface AuthInputProps {
   id: string;
   label: string;
   type: 'text' | 'email' | 'tel' | 'password';
@@ -19,7 +19,7 @@ interface SignupInputProps {
   children?: React.ReactNode;
 }
 
-export const SignupInput: React.FC<SignupInputProps> = ({
+export const AuthInput: React.FC<AuthInputProps> = ({
   id,
   label,
   type,

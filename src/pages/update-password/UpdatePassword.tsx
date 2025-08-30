@@ -7,7 +7,7 @@ interface AddPasswordProps {
   userEmail: string;
 }
 
-export function AddPassword({ userId, userEmail }: AddPasswordProps) {
+export function UpdatePassword({ userId, userEmail }: AddPasswordProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
