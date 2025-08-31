@@ -1,51 +1,55 @@
 import { useState } from 'react';
-import { Mail, Lock, LogIn, BoxIcon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { ROUTES } from '../../constants/routes';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSignin } from '../../hooks/useAuth';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { GoogleButton } from '../../components/ui/GoogleButton';
+import { AuthInput } from '../../components/auth/AuthInput';
+import { Button } from '../../components/ui/Button';
+import { useForm } from 'react-hook-form';
+import {
+  signinSchema,
+  type SigninFormData,
+} from '../../schemas/auth/signin.schema';
 
 export const Signin = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    reset,
+  } = useForm<SigninFormData>({
+    resolver: zodResolver(signinSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   });
 
   const navigate = useNavigate();
-
-  const { mutate: signIn, isLoading, error } = useSignin();
-
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const { mutate: signIn, isLoading } = useSignin();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (authError) setAuthError(null);
-  };
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
-  const handleGoogleSignin = async () => {
-    setGoogleLoading(true);
-    try {
-      const backendUrl = 'http://localhost:4000';
-      window.location.href = `${backendUrl}/auth/google`;
-    } catch (err) {
-      console.error('Google signup error:', err);
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: SigninFormData) => {
+    console.log('input data', data);
+    setAuthError(null);
 
     signIn(
-      { email: formData.email.trim(), password: formData.password },
+      { email: data.email.trim(), password: data.password },
       {
         onSuccess: () => {
+          reset();
           navigate(ROUTES.DASHBOARD, { replace: true });
         },
         onError: (err: any) => {
           setAuthError(err?.message || 'Failed to sign in');
-          setFormData((prev) => ({ ...prev, password: '' }));
+          // Clear password field on error
+          reset({ email: data.email, password: '' });
         },
       }
     );
@@ -55,14 +59,7 @@ export const Signin = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="bg-white shadow-lg rounded-lg p-8">
-          <div className="text-center mb-8">
-            <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100 mb-4">
-              <LogIn className="h-8 w-8 text-blue-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">Sign In</h1>
-          </div>
-
-          {(authError || error) && (
+          {authError && (
             <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -79,28 +76,23 @@ export const Signin = () => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-800">
-                    {authError || (error as Error).message}
-                  </p>
+                  <p className="text-sm text-red-800">{authError}</p>
                 </div>
+                <button
+                  onClick={() => setAuthError(null)}
+                  className="ml-auto text-red-500 hover:text-red-700"
+                >
+                  ×
+                </button>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <button
-              type="button"
-              onClick={handleGoogleSignin}
-              disabled={isLoading || googleLoading}
-              className="w-full flex justify-center items-center px-4 py-3 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              {googleLoading ? (
-                <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-3" />
-              ) : (
-                <BoxIcon />
-              )}
-              <span className="ml-3">Continue with Google</span>
-            </button>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <GoogleButton
+              authType="signin"
+              className="mb-6 text-gray-400 border-gray"
+            />
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -111,59 +103,52 @@ export const Signin = () => {
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                  placeholder="Enter your email"
-                />
-              </div>
-            </div>
+            <AuthInput
+              id="email"
+              label="Email Address"
+              type="email"
+              placeholder="Enter your email address"
+              icon={Mail}
+              register={register('email')}
+              error={errors.email?.message}
+              disabled={isLoading}
+              autoComplete="email"
+              required
+            />
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
+            <div className="relative">
+              <AuthInput
+                id="password"
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                icon={Lock}
+                register={register('password')}
+                error={errors.password?.message}
+                disabled={isLoading}
+                autoComplete="current-password"
+                required
+              />
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={togglePasswordVisibility}
+                disabled={isLoading}
+                className="absolute right-1 top-8 h-10 w-10 hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors duration-200"
               >
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                  placeholder="Enter your password"
-                />
-              </div>
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || !formData.email || !formData.password}
+              disabled={!isValid || isLoading}
               className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               {isLoading ? (
@@ -176,6 +161,7 @@ export const Signin = () => {
               )}
             </button>
           </form>
+
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
