@@ -1,12 +1,12 @@
+import { useState } from 'react';
 import { Button } from './Button';
 
 interface GoogleButtonProps {
-  onClick: () => void;
-  isLoading?: boolean;
-  disabled?: boolean;
   text?: string;
   loadingText?: string;
   className?: string;
+  disabled?: boolean;
+  authType?: 'signup' | 'signin';
 }
 
 const GoogleIcon = () => (
@@ -31,19 +31,31 @@ const GoogleIcon = () => (
 );
 
 export const GoogleButton = ({
-  onClick,
-  isLoading = false,
-  disabled = false,
   text = 'Continue with Google',
   loadingText = 'Redirecting...',
   className = '',
+  disabled = false,
+  authType = 'signup',
 }: GoogleButtonProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    try {
+      const backendUrl = 'http://localhost:4000';
+      window.location.href = `${backendUrl}/auth/google`;
+    } catch (err) {
+      console.error(`Google ${authType} error:`, err);
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Button
       type="button"
       variant="outline"
       size="lg"
-      onClick={onClick}
+      onClick={handleGoogleAuth}
       disabled={disabled || isLoading}
       className={`w-full border-white/20 text-white bg-white/5 hover:bg-white/10 hover:border-white/30 hover:scale-105 focus:ring-purple-500/50 transition-all duration-300 ease-out h-14 ${className}`}
     >

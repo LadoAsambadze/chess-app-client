@@ -35,12 +35,14 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-white font-medium">
+      <Label htmlFor={id} className="text-white font-medium w-full">
         {label} {required && '*'}
-        {!required && <span className="text-slate-400">(optional)</span>}
+        {!required && (
+          <span className="text-slate-400 ml-auto">(optional)</span>
+        )}
       </Label>
       <div className="relative group">
-        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-purple-400 transition-colors duration-200" />
+        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 " />
         <Input
           id={id}
           type={type}
@@ -49,7 +51,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
           disabled={disabled}
           className={`${
             children ? 'pl-10 pr-12' : 'pl-10'
-          } bg-white/10 border-white/20 text-white placeholder-slate-400 focus:border-purple-400 focus:ring-purple-400/50 transition-all duration-300 h-12 ${
+          } bg-white/10 border-gray-500 text-black placeholder-slate-400 focus:border-blue-400 focus:ring-blue-400/50 transition-all duration-100 h-12 ${
             error
               ? 'border-red-400 focus:border-red-400 focus:ring-red-400/50'
               : ''
