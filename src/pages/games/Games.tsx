@@ -1,10 +1,9 @@
-'use client';
-
 import { Trophy } from 'lucide-react';
-import { CreateGameComponent } from '../../components/modals/CreateGameModal';
+
 import { Card, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { GamesList } from '../../components/modals/GameList';
+import GamesList from '../../components/games/GameList';
+import { CreateGame } from '../../components/games/CreateGame';
 
 export function Games() {
   return (
@@ -16,7 +15,7 @@ export function Games() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-violet-400/10 to-pink-600/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 container mx-auto p-4 lg:p-8 xl:p-12">
+      <div className="relative z-10 container ">
         {/* Main Layout Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 lg:gap-12">
           {/* Main Content Area - 80% */}
@@ -25,7 +24,7 @@ export function Games() {
               {/* Glow effect behind create game component */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-3xl blur-xl transform scale-105"></div>
               <div className="relative">
-                <CreateGameComponent />
+                <CreateGame />
               </div>
             </div>
           </div>

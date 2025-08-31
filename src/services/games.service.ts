@@ -15,10 +15,25 @@ export const gamesService = {
     });
   },
 
+  // Join a game
   joinGame: (gameId: string, password?: string): Promise<Game> => {
     return apiClient(`/games/join/${gameId}`, {
       method: 'POST',
       body: JSON.stringify({ password }),
+    });
+  },
+
+  // Accept opponent join request
+  acceptOpponent: (gameId: string): Promise<Game> => {
+    return apiClient(`/games/accept/${gameId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Reject opponent join request
+  rejectOpponent: (gameId: string): Promise<Game> => {
+    return apiClient(`/games/reject/${gameId}`, {
+      method: 'POST',
     });
   },
 
