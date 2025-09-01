@@ -12,15 +12,13 @@ import {
   useAcceptOpponent,
   useRejectOpponent,
 } from '../../hooks/useGame';
-
 import { useState, useEffect } from 'react';
 import { useCurrentUser } from '../../hooks/useAuth';
 
 export default function GamesList() {
-  // Get real current user instead of hardcoded ID
   const {
     data: currentUser,
-    isLoading: userLoading,
+    isPending: userLoading,
     error: userError,
   } = useCurrentUser();
   const currentUserId = currentUser?.id;
@@ -28,12 +26,9 @@ export default function GamesList() {
   const joinMutation = useJoinGame();
   const acceptMutation = useAcceptOpponent();
   const rejectMutation = useRejectOpponent();
-  const { data: games, isLoading: loading, error } = useGetGames();
-
-  // Only setup game requests if we have a valid user ID
+  const { data: games, isPending: loading, error } = useGetGames();
   const {
     joinRequest,
-    setJoinRequest,
     respondToJoinRequest,
     notifications,
     dismissNotification,
@@ -42,31 +37,19 @@ export default function GamesList() {
 
   const [showAlert, setShowAlert] = useState(false);
 
-  // Debug: Log current user ID and component mount
   useEffect(() => {
-    if (currentUserId) {
-      console.log('GamesList mounted with currentUserId:', currentUserId);
-    }
-  }, [currentUserId]);
-
-  useEffect(() => {
-    console.log('joinRequest changed:', joinRequest);
     if (joinRequest) {
-      console.log('Join request received in component:', joinRequest);
       setShowAlert(true);
     } else {
-      console.log('No join request, hiding alert');
       setShowAlert(false);
     }
   }, [joinRequest]);
 
   const handleJoin = (gameId: string) => {
-    console.log('Attempting to join game:', gameId);
     joinMutation.mutate({ gameId });
   };
 
   const handleAcceptRequest = async () => {
-    console.log('Accepting request:', joinRequest);
     if (joinRequest) {
       await respondToJoinRequest(
         joinRequest.gameId,
@@ -78,7 +61,6 @@ export default function GamesList() {
   };
 
   const handleRejectRequest = async () => {
-    console.log('Rejecting request:', joinRequest);
     if (joinRequest) {
       await respondToJoinRequest(
         joinRequest.gameId,
@@ -89,7 +71,6 @@ export default function GamesList() {
     }
   };
 
-  // Show loading state while user data is loading
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -98,7 +79,6 @@ export default function GamesList() {
     );
   }
 
-  // Show error if user couldn't be loaded
   if (userError || !currentUserId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -113,7 +93,6 @@ export default function GamesList() {
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto min-h-screen">
-      {/* Notifications */}
       {notifications.length > 0 && (
         <div className="space-y-2">
           {notifications.map((notification, index) => (
@@ -143,21 +122,6 @@ export default function GamesList() {
           )}
         </div>
       )}
-
-      {/* Debug info - Remove in production */}
-      <div className="bg-yellow-100 p-2 rounded text-xs">
-        <div>Current User: {currentUserId}</div>
-        <div>
-          User Name: {currentUser?.name || currentUser?.email || 'Unknown'}
-        </div>
-        <div>Show Alert: {showAlert ? 'YES' : 'NO'}</div>
-        <div>
-          Join Request: {joinRequest ? JSON.stringify(joinRequest) : 'None'}
-        </div>
-        <div>Notifications: {notifications.length}</div>
-      </div>
-
-      {/* Alert for owner */}
       {showAlert && joinRequest && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-80">
@@ -174,26 +138,24 @@ export default function GamesList() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={handleRejectRequest}
-                disabled={rejectMutation.isLoading}
+                disabled={rejectMutation.isPending}
                 className="px-3 py-1.5 text-sm rounded bg-gray-500 text-white hover:bg-gray-600 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 <XIcon className="w-3 h-3" />
-                {rejectMutation.isLoading ? 'Rejecting...' : 'Reject'}
+                {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
               </button>
               <button
                 onClick={handleAcceptRequest}
-                disabled={acceptMutation.isLoading}
+                disabled={acceptMutation.isPending}
                 className="px-3 py-1.5 text-sm rounded bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
                 <CheckIcon className="w-3 h-3" />
-                {acceptMutation.isLoading ? 'Accepting...' : 'Accept'}
+                {acceptMutation.isPending ? 'Accepting...' : 'Accept'}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Error */}
       {error && (
         <div className="bg-white border border-red-200 rounded-lg p-4">
           <p className="text-sm text-red-600 text-center">
@@ -201,8 +163,6 @@ export default function GamesList() {
           </p>
         </div>
       )}
-
-      {/* Games list */}
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -280,11 +240,11 @@ export default function GamesList() {
                           <button
                             onClick={() => handleJoin(game.id)}
                             disabled={
-                              joinMutation.isLoading || !!game.pendingOpponentId
+                              joinMutation.isPending || !!game.pendingOpponentId
                             }
                             className="px-3 py-1 text-xs font-medium rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
                           >
-                            {joinMutation.isLoading
+                            {joinMutation.isPending
                               ? 'Joining...'
                               : game.pendingOpponentId
                               ? 'Request Pending'
