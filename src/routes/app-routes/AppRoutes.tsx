@@ -6,6 +6,7 @@ import {
   Home,
   Signin,
   Signup,
+  UpdatePassword,
 } from '../../pages';
 import { ProtectedRoute } from '../protected-route';
 import { ROUTES } from '../../constants';
@@ -17,6 +18,7 @@ export const AppRoutes = () => {
       <Route path={ROUTES.SIGNUP} element={<Signup />} />
       <Route path={ROUTES.SIGNIN} element={<Signin />} />
       <Route path={ROUTES.SUCCESS} element={<AuthSuccess />} />
+      <Route path={ROUTES.UPDATE_PASSWORD} element={<UpdatePassword />} />
       <Route element={<ProtectedRoute redirectTo={ROUTES.SIGNIN} />}>
         <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
         <Route path={ROUTES.GAMES} element={<Games />} />
