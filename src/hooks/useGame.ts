@@ -31,6 +31,13 @@ export const useGetGames = () => {
       );
     });
 
+    // Listen for game removal/cancellation
+    socket.on('game:removed', (data: { gameId: string }) => {
+      queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
+        prev.filter((game) => game.id !== data.gameId)
+      );
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -89,6 +96,40 @@ export const useRejectOpponent = () => {
       queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
         prev.map((game) => (game.id === updatedGame.id ? updatedGame : game))
       );
+    },
+  });
+};
+
+export const useCancelGame = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ gameId }: { gameId: string }) =>
+      gamesService.cancelGame(gameId),
+    onSuccess: (_, variables) => {
+      // Remove the cancelled game from the list
+      queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
+        prev.filter((game) => game.id !== variables.gameId)
+      );
+    },
+    onError: (error) => {
+      console.error('Error cancelling game:', error);
+    },
+  });
+};
+
+export const useLeaveGame = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ gameId }: { gameId: string }) =>
+      gamesService.leaveGame(gameId),
+    onSuccess: (result, variables) => {
+      // Refetch games to get updated state
+      queryClient.invalidateQueries({ queryKey: [GAMES_KEY] });
+    },
+    onError: (error) => {
+      console.error('Error leaving game:', error);
     },
   });
 };
@@ -224,6 +265,56 @@ export const useGameRequests = (currentUserId: string) => {
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
           prev.map((game) => (game.id === data.game.id ? data.game : game))
         );
+      }
+    );
+
+    // Listen for game cancelled
+    socket.on('game:cancelled', (data: { gameId: string }) => {
+      console.log('🚫 Game was cancelled:', data);
+      setNotifications((prev) => [
+        ...prev,
+        `Game ${data.gameId.slice(0, 8)}... was cancelled by the creator`,
+      ]);
+
+      // Clear join request if it matches the cancelled game
+      setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
+    });
+
+    // Listen for join request withdrawn
+    socket.on('game:join-request-withdrawn', (data: { gameId: string }) => {
+      console.log('📤 Join request was withdrawn:', data);
+      setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
+
+      setNotifications((prev) => [
+        ...prev,
+        `Join request for game ${data.gameId.slice(0, 8)}... was withdrawn`,
+      ]);
+    });
+
+    // Listen for opponent left
+    socket.on('game:opponent-left', (data: { gameId: string }) => {
+      console.log('🚪 Opponent left the game:', data);
+      setNotifications((prev) => [
+        ...prev,
+        `Opponent left game ${data.gameId.slice(0, 8)}...`,
+      ]);
+    });
+
+    // Listen for game finished (forfeit)
+    socket.on(
+      'game:finished',
+      (data: { gameId: string; winnerId: string; reason: string }) => {
+        console.log('🏁 Game finished:', data);
+        if (data.reason === 'forfeit') {
+          setNotifications((prev) => [
+            ...prev,
+            `Game ${data.gameId.slice(0, 8)}... ended - ${
+              data.winnerId === currentUserId
+                ? 'You won by forfeit!'
+                : 'Opponent won by forfeit'
+            }`,
+          ]);
+        }
       }
     );
 

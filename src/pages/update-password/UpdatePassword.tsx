@@ -112,7 +112,7 @@ export const UpdatePassword = () => {
 
     try {
       const response = await fetch(
-        'http://localhost:4000/auth/send-update-password-email',
+        'http://localhost:4000/auth/send-update-password-email', 
         {
           method: 'POST',
           headers: {
@@ -443,4 +443,3 @@ export const UpdatePassword = () => {
     </div>
   );
 };
-y;

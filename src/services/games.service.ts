@@ -2,6 +2,22 @@ import { apiClient } from '../api/api-client';
 import type { CreateGamePayload, Game } from '../types/games.type';
 
 export const gamesService = {
+  // Cancel a game
+  cancelGame: async (gameId: string): Promise<{ message: string }> => {
+    const response = await apiClient(`/games/cancel/${gameId}`, {
+      method: 'DELETE',
+    });
+    return response;
+  },
+
+  // Leave a game
+  leaveGame: async (gameId: string): Promise<{ message: string }> => {
+    const response = await apiClient(`/games/leave/${gameId}`, {
+      method: 'POST',
+    });
+    return response;
+  },
+
   // Get all games
   getGames: (): Promise<Game[]> => {
     return apiClient('/games');

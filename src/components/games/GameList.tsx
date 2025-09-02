@@ -1,9 +1,12 @@
 import {
-  ClockIcon,
-  GamepadIcon,
-  XIcon,
-  CheckIcon,
-  AlertCircleIcon,
+  Clock,
+  Gamepad2,
+  X,
+  Check,
+  AlertCircle,
+  Trash,
+  LogOutIcon,
+ 
 } from 'lucide-react';
 import {
   useGetGames,
@@ -11,6 +14,8 @@ import {
   useGameRequests,
   useAcceptOpponent,
   useRejectOpponent,
+  useCancelGame,
+  useLeaveGame,
 } from '../../hooks/useGame';
 import { useState, useEffect } from 'react';
 import { useCurrentUser } from '../../hooks/useAuth';
@@ -26,6 +31,9 @@ export default function GamesList() {
   const joinMutation = useJoinGame();
   const acceptMutation = useAcceptOpponent();
   const rejectMutation = useRejectOpponent();
+  const cancelMutation = useCancelGame();
+  const leaveMutation = useLeaveGame();
+
   const { data: games, isPending: loading, error } = useGetGames();
   const {
     joinRequest,
@@ -47,6 +55,22 @@ export default function GamesList() {
 
   const handleJoin = (gameId: string) => {
     joinMutation.mutate({ gameId });
+  };
+
+  const handleCancel = (gameId: string) => {
+    if (window.confirm('Are you sure you want to cancel this game?')) {
+      cancelMutation.mutate({ gameId });
+    }
+  };
+
+  const handleLeave = (gameId: string) => {
+    if (
+      window.confirm(
+        'Are you sure you want to leave this game? This action cannot be undone.'
+      )
+    ) {
+      leaveMutation.mutate({ gameId });
+    }
   };
 
   const handleAcceptRequest = async () => {
@@ -91,6 +115,14 @@ export default function GamesList() {
     );
   }
 
+  const isUserInGame = (game: any) => {
+    return (
+      game.creatorId === currentUserId ||
+      game.opponentId === currentUserId ||
+      game.pendingOpponentId === currentUserId
+    );
+  };
+
   return (
     <div className="space-y-4 max-w-2xl mx-auto min-h-screen">
       {notifications.length > 0 && (
@@ -101,14 +133,14 @@ export default function GamesList() {
               className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between"
             >
               <div className="flex items-center gap-2">
-                <AlertCircleIcon className="w-4 h-4 text-blue-500" />
+                <AlertCircle className="w-4 h-4 text-blue-500" />
                 <span className="text-sm text-blue-700">{notification}</span>
               </div>
               <button
                 onClick={() => dismissNotification(index)}
                 className="text-blue-500 hover:text-blue-700 p-1"
               >
-                <XIcon className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           ))}
@@ -122,6 +154,7 @@ export default function GamesList() {
           )}
         </div>
       )}
+
       {showAlert && joinRequest && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-80">
@@ -141,7 +174,7 @@ export default function GamesList() {
                 disabled={rejectMutation.isPending}
                 className="px-3 py-1.5 text-sm rounded bg-gray-500 text-white hover:bg-gray-600 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
-                <XIcon className="w-3 h-3" />
+                <X className="w-3 h-3" />
                 {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
               </button>
               <button
@@ -149,13 +182,14 @@ export default function GamesList() {
                 disabled={acceptMutation.isPending}
                 className="px-3 py-1.5 text-sm rounded bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1"
               >
-                <CheckIcon className="w-3 h-3" />
+                <Check className="w-3 h-3" />
                 {acceptMutation.isPending ? 'Accepting...' : 'Accept'}
               </button>
             </div>
           </div>
         </div>
       )}
+
       {error && (
         <div className="bg-white border border-red-200 rounded-lg p-4">
           <p className="text-sm text-red-600 text-center">
@@ -163,10 +197,11 @@ export default function GamesList() {
           </p>
         </div>
       )}
+
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <GamepadIcon className="w-4 h-4" />
+            <Gamepad2 className="w-4 h-4" />
             <h3 className="font-semibold text-gray-900 text-sm">
               Active Games
             </h3>
@@ -193,7 +228,7 @@ export default function GamesList() {
                   className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <GamepadIcon className="w-4 h-4" />
+                    <Gamepad2 className="w-4 h-4" />
                     <div>
                       <div className="text-sm font-medium text-gray-900">
                         Game by {game.creatorId.slice(0, 6)}...
@@ -202,6 +237,12 @@ export default function GamesList() {
                             Your Game
                           </span>
                         )}
+                        {isUserInGame(game) &&
+                          game.creatorId !== currentUserId && (
+                            <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded">
+                              You're In
+                            </span>
+                          )}
                       </div>
                       <div className="text-xs text-gray-500">
                         Status: {game.status}
@@ -222,7 +263,7 @@ export default function GamesList() {
 
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
-                      <ClockIcon className="w-3 h-3" />
+                      <Clock className="w-3 h-3" />
                       <span className="text-xs text-gray-600">
                         {Math.floor(game.timeControl / 60)} min
                       </span>
@@ -234,37 +275,79 @@ export default function GamesList() {
                       </span>
                     )}
 
-                    {game.status === 'WAITING' && (
-                      <>
-                        {game.creatorId !== currentUserId ? (
-                          <button
-                            onClick={() => handleJoin(game.id)}
-                            disabled={
-                              joinMutation.isPending || !!game.pendingOpponentId
-                            }
-                            className="px-3 py-1 text-xs font-medium rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
-                          >
-                            {joinMutation.isPending
-                              ? 'Joining...'
-                              : game.pendingOpponentId
-                              ? 'Request Pending'
-                              : 'Join'}
-                          </button>
-                        ) : (
-                          <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded">
-                            {game.pendingOpponentId
-                              ? 'Request Pending'
-                              : 'Waiting for players'}
-                          </span>
-                        )}
-                      </>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {game.status === 'WAITING' && (
+                        <>
+                          {game.creatorId !== currentUserId &&
+                          !isUserInGame(game) ? (
+                            <button
+                              onClick={() => handleJoin(game.id)}
+                              disabled={
+                                joinMutation.isPending ||
+                                !!game.pendingOpponentId
+                              }
+                              className="px-3 py-1 text-xs font-medium rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                            >
+                              {joinMutation.isPending
+                                ? 'Joining...'
+                                : game.pendingOpponentId
+                                ? 'Request Pending'
+                                : 'Join'}
+                            </button>
+                          ) : game.creatorId === currentUserId ? (
+                            <>
+                              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded">
+                                {game.pendingOpponentId
+                                  ? 'Request Pending'
+                                  : 'Waiting for players'}
+                              </span>
+                              <button
+                                onClick={() => handleCancel(game.id)}
+                                disabled={cancelMutation.isPending}
+                                className="px-2 py-1 text-xs font-medium rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-1"
+                                title="Cancel Game"
+                              >
+                                <Trash className="w-3 h-3" />
+                                {cancelMutation.isPending
+                                  ? 'Cancelling...'
+                                  : 'Cancel'}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleLeave(game.id)}
+                              disabled={leaveMutation.isPending}
+                              className="px-2 py-1 text-xs font-medium rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center gap-1"
+                              title="Leave Game"
+                            >
+                              <LogOutIcon className="w-3 h-3" />
+                              {leaveMutation.isPending ? 'Leaving...' : 'Leave'}
+                            </button>
+                          )}
+                        </>
+                      )}
 
-                    {game.status === 'IN_PROGRESS' && (
-                      <button className="px-3 py-1 text-xs font-medium rounded bg-purple-500 text-white hover:bg-purple-600 transition-colors">
-                        Play
-                      </button>
-                    )}
+                      {game.status === 'IN_PROGRESS' && (
+                        <>
+                          <button className="px-3 py-1 text-xs font-medium rounded bg-purple-500 text-white hover:bg-purple-600 transition-colors">
+                            Play
+                          </button>
+                          {isUserInGame(game) && (
+                            <button
+                              onClick={() => handleLeave(game.id)}
+                              disabled={leaveMutation.isPending}
+                              className="px-2 py-1 text-xs font-medium rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-1"
+                              title="Forfeit Game"
+                            >
+                              <LogOutIcon className="w-3 h-3" />
+                              {leaveMutation.isPending
+                                ? 'Forfeiting...'
+                                : 'Forfeit'}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
