@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { AuthInput } from '../../components/auth/AuthInput';
-import { Button } from '../../components/ui/Button';
+import { Button } from '../../components/ui/button';
 import { ROUTES } from '../../constants/routes';
 
 // Schema for email request
@@ -112,7 +112,7 @@ export const UpdatePassword = () => {
 
     try {
       const response = await fetch(
-        'http://localhost:4000/auth/send-update-password-email', 
+        'http://localhost:4000/auth/send-update-password-email',
         {
           method: 'POST',
           headers: {

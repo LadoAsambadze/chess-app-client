@@ -1,19 +1,30 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { Clock, User, X } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 interface JoinRequestModalProps {
   joinRequest: {
     gameId: string;
     requesterId: string;
     requesterName?: string;
+    timestamp?: number;
   } | null;
   onAccept: () => void;
   onReject: () => void;
-  acceptMutation: any;
-  rejectMutation: any;
+  acceptMutation: { isPending: boolean };
+  rejectMutation: { isPending: boolean };
 }
+
+const TIMEOUT_DURATION = 30; // seconds
 
 export function JoinRequestModal({
   joinRequest,
@@ -22,94 +33,86 @@ export function JoinRequestModal({
   acceptMutation,
   rejectMutation,
 }: JoinRequestModalProps) {
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(TIMEOUT_DURATION);
 
   useEffect(() => {
-    if (!joinRequest) {
-      setTimeLeft(30);
+    if (!joinRequest) return;
+
+    const now = Date.now();
+    const requestTime = joinRequest.timestamp || now;
+    const elapsed = Math.floor((now - requestTime) / 1000);
+    const initialRemaining = Math.max(0, TIMEOUT_DURATION - elapsed);
+
+    setTimeLeft(initialRemaining);
+
+    if (initialRemaining === 0) {
+      onReject();
       return;
     }
 
-    // Start countdown timer
-    const timer = setInterval(() => {
+    const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          // Auto-reject when timer reaches 0
+          clearInterval(interval);
           onReject();
-          return 30;
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => clearInterval(interval);
   }, [joinRequest, onReject]);
 
   if (!joinRequest) return null;
 
   const isLoading = acceptMutation.isPending || rejectMutation.isPending;
+  const progressPercent = (timeLeft / TIMEOUT_DURATION) * 100;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Join Request</h3>
-          <button
-            onClick={onReject}
-            disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                {joinRequest.requesterName || 'Player'}
-              </p>
-              <p className="text-xs text-gray-500">wants to join your game</p>
-            </div>
-          </div>
-
-          {/* Timer Display */}
-          <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <Clock className="w-4 h-4 text-orange-600" />
-            <span className="text-sm text-orange-700">
-              Auto-reject in {timeLeft} seconds
-            </span>
-            <div className="ml-auto">
-              <div className="w-16 h-2 bg-orange-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-orange-500 transition-all duration-1000 ease-linear"
-                  style={{ width: `${(timeLeft / 30) * 100}%` }}
-                />
+    <AlertDialog open={!!joinRequest}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Join Request
+          </AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <p>
+              {joinRequest.requesterName || 'A player'} wants to join your game.
+            </p>
+            {timeLeft > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-2 transition-[width] duration-1000 ease-linear"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <span className="text-xs font-mono min-w-[3ch]">
+                  {timeLeft}s
+                </span>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
             onClick={onReject}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-xs"
           >
-            {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
-          </button>
-          <button
+            Reject
+          </AlertDialogCancel>
+          <AlertDialogAction
             onClick={onAccept}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-xs"
           >
-            {acceptMutation.isPending ? 'Accepting...' : 'Accept'}
-          </button>
-        </div>
-      </div>
-    </div>
+            {isLoading ? 'Processing…' : 'Accept'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

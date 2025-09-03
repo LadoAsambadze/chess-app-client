@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, User, Phone, UserPlus } from 'lucide-react';
 import { ROUTES } from '../../constants/routes';
 import { Card, CardContent } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Button } from '../../components/ui/Button';
+import { Button } from '../../components/ui/button';
 import { GoogleButton } from '../../components/ui/GoogleButton';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {

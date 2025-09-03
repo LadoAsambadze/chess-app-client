@@ -1,5 +1,5 @@
 import { Clock } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 
 export function TimePresetButton({ preset, isSelected, onClick }: any) {
   return (

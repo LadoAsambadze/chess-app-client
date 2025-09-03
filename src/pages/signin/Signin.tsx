@@ -6,7 +6,7 @@ import { useSignin } from '../../hooks/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GoogleButton } from '../../components/ui/GoogleButton';
 import { AuthInput } from '../../components/auth/AuthInput';
-import { Button } from '../../components/ui/Button';
+import { Button } from '../../components/ui/button';
 import { useForm } from 'react-hook-form';
 import {
   signinSchema,

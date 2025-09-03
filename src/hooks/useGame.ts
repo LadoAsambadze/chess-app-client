@@ -8,6 +8,7 @@ import type { Game } from '../types/games.type';
 
 const SOCKET_URL = 'http://localhost:4000';
 const GAMES_KEY = 'games';
+const JOIN_REQUEST_STORAGE_KEY = 'pendingJoinRequest';
 
 export const useGetGames = () => {
   const queryClient = useQueryClient();
@@ -108,7 +109,6 @@ export const useCancelGame = () => {
     mutationFn: ({ gameId }: { gameId: string }) =>
       gamesService.cancelGame(gameId),
     onSuccess: (_, variables) => {
-      // Remove the cancelled game from the list
       queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
         prev.filter((game) => game.id !== variables.gameId)
       );
@@ -123,7 +123,6 @@ export const useLeaveGame = () => {
     mutationFn: ({ gameId }: { gameId: string }) =>
       gamesService.leaveGame(gameId),
     onSuccess: () => {
-      // Refetch games to get updated state
       queryClient.invalidateQueries({ queryKey: [GAMES_KEY] });
     },
   });
@@ -134,11 +133,51 @@ export const useGameRequests = (currentUserId: string) => {
     gameId: string;
     requesterId: string;
     requesterName?: string;
+    timestamp?: number;
   } | null>(null);
 
   const [notifications, setNotifications] = useState<string[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const stored = localStorage.getItem(
+      `${JOIN_REQUEST_STORAGE_KEY}_${currentUserId}`
+    );
+    if (stored) {
+      try {
+        const parsedRequest = JSON.parse(stored);
+        const now = Date.now();
+        const elapsed = now - (parsedRequest.timestamp || now);
+
+        if (elapsed < 30000) {
+          setJoinRequest(parsedRequest);
+        } else {
+          localStorage.removeItem(
+            `${JOIN_REQUEST_STORAGE_KEY}_${currentUserId}`
+          );
+        }
+      } catch (error) {
+        console.error('Error parsing stored join request:', error);
+        localStorage.removeItem(`${JOIN_REQUEST_STORAGE_KEY}_${currentUserId}`);
+      }
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    if (joinRequest) {
+      localStorage.setItem(
+        `${JOIN_REQUEST_STORAGE_KEY}_${currentUserId}`,
+        JSON.stringify(joinRequest)
+      );
+    } else {
+      localStorage.removeItem(`${JOIN_REQUEST_STORAGE_KEY}_${currentUserId}`);
+    }
+  }, [joinRequest, currentUserId]);
 
   useEffect(() => {
     if (!currentUserId) {
@@ -166,7 +205,6 @@ export const useGameRequests = (currentUserId: string) => {
       // Room joined confirmed
     });
 
-    // Listen for join requests
     socket.on(
       'game:join-requested',
       (data: {
@@ -174,11 +212,13 @@ export const useGameRequests = (currentUserId: string) => {
         requesterId: string;
         requesterName?: string;
       }) => {
-        setJoinRequest(data);
+        setJoinRequest({
+          ...data,
+          timestamp: Date.now(),
+        });
       }
     );
 
-    // Listen for join responses
     socket.on(
       'game:join-response',
       (data: { gameId: string; accepted: boolean }) => {
@@ -188,7 +228,6 @@ export const useGameRequests = (currentUserId: string) => {
       }
     );
 
-    // Listen for request accepted
     socket.on(
       'game:request-accepted',
       (data: { gameId: string; game: Game }) => {
@@ -197,14 +236,12 @@ export const useGameRequests = (currentUserId: string) => {
           `Your request to join game was accepted!`,
         ]);
 
-        // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
           prev.map((game) => (game.id === data.game.id ? data.game : game))
         );
       }
     );
 
-    // Listen for request rejected
     socket.on(
       'game:request-rejected',
       (data: { gameId: string; message: string }) => {
@@ -215,38 +252,32 @@ export const useGameRequests = (currentUserId: string) => {
       }
     );
 
-    // Listen for opponent accepted
     socket.on(
       'game:opponent-accepted',
       (data: { gameId: string; game: Game }) => {
         setJoinRequest(null);
 
-        // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
           prev.map((game) => (game.id === data.game.id ? data.game : game))
         );
       }
     );
 
-    // Listen for opponent rejected
     socket.on(
       'game:opponent-rejected',
       (data: { gameId: string; game: Game }) => {
         setJoinRequest(null);
 
-        // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
           prev.map((game) => (game.id === data.game.id ? data.game : game))
         );
       }
     );
 
-    // Listen for modal close event (when requester leaves)
     socket.on('game:modal-close', (data: { gameId: string }) => {
       setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
     });
 
-    // Listen for request timeout event
     socket.on(
       'game:request-timeout',
       (data: { gameId: string; message: string; game: Game }) => {
@@ -256,25 +287,21 @@ export const useGameRequests = (currentUserId: string) => {
           data.message || 'Join request timed out',
         ]);
 
-        // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
           prev.map((game) => (game.id === data.game.id ? data.game : game))
         );
       }
     );
 
-    // Listen for game cancelled
     socket.on('game:cancelled', (data: { gameId: string }) => {
       setNotifications((prev) => [
         ...prev,
         `Game ${data.gameId.slice(0, 8)}... was cancelled by the creator`,
       ]);
 
-      // Clear join request if it matches the cancelled game
       setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
     });
 
-    // Listen for game finished (forfeit)
     socket.on(
       'game:finished',
       (data: { gameId: string; winnerId: string; reason: string }) => {
