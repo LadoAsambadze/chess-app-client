@@ -1,3 +1,5 @@
+'use client';
+
 import { Gamepad2, X, AlertCircle } from 'lucide-react';
 import {
   useGetGames,

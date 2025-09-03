@@ -1,6 +1,8 @@
+'use client';
+
 import { useEffect, useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { io, Socket } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 import { gamesService } from '../services/games.service';
 import type { Game } from '../types/games.type';
 
@@ -231,6 +233,28 @@ export const useGameRequests = (currentUserId: string) => {
       'game:opponent-rejected',
       (data: { gameId: string; game: Game }) => {
         setJoinRequest(null);
+
+        // Update games list
+        queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
+          prev.map((game) => (game.id === data.game.id ? data.game : game))
+        );
+      }
+    );
+
+    // Listen for modal close event (when requester leaves)
+    socket.on('game:modal-close', (data: { gameId: string }) => {
+      setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
+    });
+
+    // Listen for request timeout event
+    socket.on(
+      'game:request-timeout',
+      (data: { gameId: string; message: string; game: Game }) => {
+        setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
+        setNotifications((prev) => [
+          ...prev,
+          data.message || 'Join request timed out',
+        ]);
 
         // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
