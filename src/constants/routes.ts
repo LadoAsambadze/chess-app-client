@@ -4,6 +4,6 @@ export const ROUTES = {
   SIGNIN: '/signin',
   UPDATE_PASSWORD: '/update-password',
   SUCCESS: '/auth-success',
-  DASHBOARD: '/dashboard',
   GAMES: '/games',
+  USER_GAME: '/games/:userGame',
 } as const;

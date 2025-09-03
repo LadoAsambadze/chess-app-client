@@ -44,7 +44,7 @@ export const Signin = () => {
       {
         onSuccess: () => {
           reset();
-          navigate(ROUTES.DASHBOARD, { replace: true });
+          navigate(ROUTES.GAMES, { replace: true });
         },
         onError: (err: any) => {
           setAuthError(err?.message || 'Failed to sign in');

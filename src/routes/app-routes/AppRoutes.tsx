@@ -1,12 +1,12 @@
 import { Routes, Route } from 'react-router-dom';
 import {
   AuthSuccess,
-  Dashboard,
   Games,
   Home,
   Signin,
   Signup,
   UpdatePassword,
+  UserGame,
 } from '../../pages';
 import { ProtectedRoute } from '../protected-route';
 import { ROUTES } from '../../constants';
@@ -20,8 +20,8 @@ export const AppRoutes = () => {
       <Route path={ROUTES.SUCCESS} element={<AuthSuccess />} />
       <Route path={ROUTES.UPDATE_PASSWORD} element={<UpdatePassword />} />
       <Route element={<ProtectedRoute redirectTo={ROUTES.SIGNIN} />}>
-        <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
         <Route path={ROUTES.GAMES} element={<Games />} />
+        <Route path={ROUTES.USER_GAME} element={<UserGame />} />
       </Route>
     </Routes>
   );

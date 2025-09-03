@@ -6,7 +6,6 @@ import {
   AlertCircle,
   Trash,
   LogOutIcon,
- 
 } from 'lucide-react';
 import {
   useGetGames,
@@ -19,8 +18,11 @@ import {
 } from '../../hooks/useGame';
 import { useState, useEffect } from 'react';
 import { useCurrentUser } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 export default function GamesList() {
+  const navigate = useNavigate();
+
   const {
     data: currentUser,
     isPending: userLoading,
@@ -53,8 +55,31 @@ export default function GamesList() {
     }
   }, [joinRequest]);
 
-  const handleJoin = (gameId: string) => {
-    joinMutation.mutate({ gameId });
+  // Listen for game status changes to redirect requesting users when accepted
+  useEffect(() => {
+    if (games && currentUserId) {
+      const userGame = games.find(
+        (game) =>
+          game.opponentId === currentUserId && game.status === 'IN_PROGRESS'
+      );
+
+      // If user was just accepted into a game (became opponent), redirect them
+      if (userGame) {
+        navigate(`/games/${userGame.id}`);
+      }
+    }
+  }, [games, currentUserId, navigate]);
+
+  // Fixed handleJoin - removed immediate navigation
+  const handleJoin = async (gameId: string) => {
+    try {
+      await joinMutation.mutateAsync({ gameId });
+      // Don't navigate here - wait for approval
+      // The useEffect above will handle navigation when the request is accepted
+    } catch (error) {
+      console.error('Failed to join game:', error);
+      // Handle error if needed
+    }
   };
 
   const handleCancel = (gameId: string) => {
@@ -73,14 +98,21 @@ export default function GamesList() {
     }
   };
 
+  // Modified handleAcceptRequest to include navigation
   const handleAcceptRequest = async () => {
     if (joinRequest) {
-      await respondToJoinRequest(
-        joinRequest.gameId,
-        joinRequest.requesterId,
-        true
-      );
-      setShowAlert(false);
+      try {
+        await respondToJoinRequest(
+          joinRequest.gameId,
+          joinRequest.requesterId,
+          true
+        );
+        setShowAlert(false);
+        // Navigate both users to the game
+        navigate(`/games/${joinRequest.gameId}`);
+      } catch (error) {
+        console.error('Failed to accept request:', error);
+      }
     }
   };
 
@@ -93,6 +125,11 @@ export default function GamesList() {
       );
       setShowAlert(false);
     }
+  };
+
+  // Add function to handle playing an in-progress game
+  const handlePlayGame = (gameId: string) => {
+    navigate(`/games/${gameId}`);
   };
 
   if (userLoading) {
@@ -289,7 +326,7 @@ export default function GamesList() {
                               className="px-3 py-1 text-xs font-medium rounded bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
                             >
                               {joinMutation.isPending
-                                ? 'Joining...'
+                                ? 'Requesting...'
                                 : game.pendingOpponentId
                                 ? 'Request Pending'
                                 : 'Join'}
@@ -329,7 +366,10 @@ export default function GamesList() {
 
                       {game.status === 'IN_PROGRESS' && (
                         <>
-                          <button className="px-3 py-1 text-xs font-medium rounded bg-purple-500 text-white hover:bg-purple-600 transition-colors">
+                          <button
+                            onClick={() => handlePlayGame(game.id)}
+                            className="px-3 py-1 text-xs font-medium rounded bg-purple-500 text-white hover:bg-purple-600 transition-colors"
+                          >
                             Play
                           </button>
                           {isUserInGame(game) && (
