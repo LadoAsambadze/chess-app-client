@@ -10,11 +10,12 @@ import {
   useCancelGame,
   useLeaveGame,
 } from '../../hooks/useGame';
-import { useState, useEffect } from 'react';
-import { useCurrentUser } from '../../hooks/useAuth';
+import { useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { JoinRequestModal } from './JoinRequestModal';
 import { GameItem } from './GameItem';
+import { useCurrentUser } from '../../hooks/useAuth';
 
 export function GamesList() {
   const navigate = useNavigate();
@@ -36,11 +37,11 @@ export function GamesList() {
     clearAllNotifications,
   } = useGameRequests(currentUserId || '');
 
-  const [showAlert, setShowAlert] = useState(false);
+  // const [showAlert, setShowAlert] = useState(false);
 
-  useEffect(() => {
-    setShowAlert(!!joinRequest);
-  }, [joinRequest]);
+  // useEffect(() => {
+  //   setShowAlert(!!joinRequest);
+  // }, [joinRequest]);
 
   useEffect(() => {
     if (games && currentUserId) {
@@ -82,7 +83,6 @@ export function GamesList() {
           joinRequest.requesterId,
           true
         );
-        setShowAlert(false);
         navigate(`/games/${joinRequest.gameId}`);
       } catch (error) {
         // Error handled
@@ -97,7 +97,6 @@ export function GamesList() {
         joinRequest.requesterId,
         false
       );
-      setShowAlert(false);
     }
   };
 
@@ -148,7 +147,7 @@ export function GamesList() {
 
       {/* Join Request Modal */}
       <JoinRequestModal
-        joinRequest={showAlert ? joinRequest : null}
+        joinRequest={joinRequest}
         onAccept={handleAcceptRequest}
         onReject={handleRejectRequest}
         acceptMutation={acceptMutation}
