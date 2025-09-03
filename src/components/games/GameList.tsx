@@ -37,6 +37,10 @@ export function GamesList() {
     clearAllNotifications,
   } = useGameRequests(currentUserId || '');
 
+  const uniqueGames = Array.from(
+    new Map((games ?? []).map((g) => [g.id, g])).values()
+  );
+
   // const [showAlert, setShowAlert] = useState(false);
 
   // useEffect(() => {
@@ -181,7 +185,7 @@ export function GamesList() {
             </p>
           ) : (
             <div className="space-y-2">
-              {games.map((game) => (
+              {uniqueGames.map((game) => (
                 <GameItem
                   key={game.id}
                   game={game}
