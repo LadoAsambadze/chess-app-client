@@ -31,7 +31,6 @@ export const useGetGames = () => {
       );
     });
 
-    // Listen for game removal/cancellation
     socket.on('game:removed', (data: { gameId: string }) => {
       queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
         prev.filter((game) => game.id !== data.gameId)
@@ -112,9 +111,6 @@ export const useCancelGame = () => {
         prev.filter((game) => game.id !== variables.gameId)
       );
     },
-    onError: (error) => {
-      console.error('Error cancelling game:', error);
-    },
   });
 };
 
@@ -124,12 +120,9 @@ export const useLeaveGame = () => {
   return useMutation({
     mutationFn: ({ gameId }: { gameId: string }) =>
       gamesService.leaveGame(gameId),
-    onSuccess: (result, variables) => {
+    onSuccess: () => {
       // Refetch games to get updated state
       queryClient.invalidateQueries({ queryKey: [GAMES_KEY] });
-    },
-    onError: (error) => {
-      console.error('Error leaving game:', error);
     },
   });
 };
@@ -146,15 +139,10 @@ export const useGameRequests = (currentUserId: string) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Don't setup socket if no user ID
     if (!currentUserId) {
-      console.log('⏳ No user ID provided, skipping socket setup');
       return;
     }
 
-    console.log('🔌 Setting up socket connection for user:', currentUserId);
-
-    // Create socket connection
     const socket: Socket = io(`${SOCKET_URL}/games`, {
       withCredentials: true,
       auth: { userId: currentUserId },
@@ -165,25 +153,15 @@ export const useGameRequests = (currentUserId: string) => {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('✅ Socket connected:', socket.id);
-      console.log('👤 Joining user room:', currentUserId);
       socket.emit('join-user-room', currentUserId);
     });
 
-    socket.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected:', reason);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('🚨 Socket connection error:', error);
-    });
-
     socket.on('connection-confirmed', (data) => {
-      console.log('✅ Connection confirmed:', data);
+      // Connection confirmed
     });
 
     socket.on('room-joined', (data) => {
-      console.log('🏠 Room joined confirmed:', data);
+      // Room joined confirmed
     });
 
     // Listen for join requests
@@ -194,7 +172,6 @@ export const useGameRequests = (currentUserId: string) => {
         requesterId: string;
         requesterName?: string;
       }) => {
-        console.log('📨 Received join request:', data);
         setJoinRequest(data);
       }
     );
@@ -203,9 +180,7 @@ export const useGameRequests = (currentUserId: string) => {
     socket.on(
       'game:join-response',
       (data: { gameId: string; accepted: boolean }) => {
-        console.log('📬 Join response received:', data);
         if (data.accepted) {
-          console.log('✅ Request accepted, clearing join request');
           setJoinRequest(null);
         }
       }
@@ -215,7 +190,6 @@ export const useGameRequests = (currentUserId: string) => {
     socket.on(
       'game:request-accepted',
       (data: { gameId: string; game: Game }) => {
-        console.log('🎉 Join request was accepted:', data);
         setNotifications((prev) => [
           ...prev,
           `Your request to join game was accepted!`,
@@ -232,7 +206,6 @@ export const useGameRequests = (currentUserId: string) => {
     socket.on(
       'game:request-rejected',
       (data: { gameId: string; message: string }) => {
-        console.log('❌ Join request was rejected:', data);
         setNotifications((prev) => [
           ...prev,
           data.message || 'Your join request was rejected',
@@ -240,12 +213,11 @@ export const useGameRequests = (currentUserId: string) => {
       }
     );
 
-    // Listen for opponent accepted (for game creator)
+    // Listen for opponent accepted
     socket.on(
       'game:opponent-accepted',
       (data: { gameId: string; game: Game }) => {
-        console.log('✅ Opponent accepted:', data);
-        setJoinRequest(null); // Clear any pending requests
+        setJoinRequest(null);
 
         // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
@@ -254,12 +226,11 @@ export const useGameRequests = (currentUserId: string) => {
       }
     );
 
-    // Listen for opponent rejected (for game creator)
+    // Listen for opponent rejected
     socket.on(
       'game:opponent-rejected',
       (data: { gameId: string; game: Game }) => {
-        console.log('❌ Opponent rejected:', data);
-        setJoinRequest(null); // Clear any pending requests
+        setJoinRequest(null);
 
         // Update games list
         queryClient.setQueryData<Game[]>([GAMES_KEY], (prev = []) =>
@@ -270,7 +241,6 @@ export const useGameRequests = (currentUserId: string) => {
 
     // Listen for game cancelled
     socket.on('game:cancelled', (data: { gameId: string }) => {
-      console.log('🚫 Game was cancelled:', data);
       setNotifications((prev) => [
         ...prev,
         `Game ${data.gameId.slice(0, 8)}... was cancelled by the creator`,
@@ -280,31 +250,10 @@ export const useGameRequests = (currentUserId: string) => {
       setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
     });
 
-    // Listen for join request withdrawn
-    socket.on('game:join-request-withdrawn', (data: { gameId: string }) => {
-      console.log('📤 Join request was withdrawn:', data);
-      setJoinRequest((prev) => (prev?.gameId === data.gameId ? null : prev));
-
-      setNotifications((prev) => [
-        ...prev,
-        `Join request for game ${data.gameId.slice(0, 8)}... was withdrawn`,
-      ]);
-    });
-
-    // Listen for opponent left
-    socket.on('game:opponent-left', (data: { gameId: string }) => {
-      console.log('🚪 Opponent left the game:', data);
-      setNotifications((prev) => [
-        ...prev,
-        `Opponent left game ${data.gameId.slice(0, 8)}...`,
-      ]);
-    });
-
     // Listen for game finished (forfeit)
     socket.on(
       'game:finished',
       (data: { gameId: string; winnerId: string; reason: string }) => {
-        console.log('🏁 Game finished:', data);
         if (data.reason === 'forfeit') {
           setNotifications((prev) => [
             ...prev,
@@ -319,40 +268,29 @@ export const useGameRequests = (currentUserId: string) => {
     );
 
     return () => {
-      console.log('🧹 Cleaning up socket connection');
       socket.disconnect();
       socketRef.current = null;
     };
   }, [currentUserId, queryClient]);
 
-  // Function to accept/reject join requests (now using REST API)
   const respondToJoinRequest = async (
     gameId: string,
     requesterId: string,
     accept: boolean
   ) => {
     try {
-      console.log(`📤 Responding to join request via API:`, {
-        gameId,
-        requesterId,
-        accept,
-      });
-
       if (accept) {
         await gamesService.acceptOpponent(gameId);
       } else {
         await gamesService.rejectOpponent(gameId);
       }
 
-      // Clear the current request
       setJoinRequest(null);
     } catch (error) {
-      console.error('❌ Error responding to join request:', error);
-      // You might want to show an error message to the user here
+      console.error('Error responding to join request:', error);
     }
   };
 
-  // Function to dismiss notifications
   const dismissNotification = (index: number) => {
     setNotifications((prev) => prev.filter((_, i) => i !== index));
   };
