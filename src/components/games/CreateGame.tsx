@@ -5,7 +5,7 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import { useCreateGame } from '../../hooks/useGame';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 import { TimePresetButton } from './TimePressButton';
 import { PrivacyOption } from './PrivaciOption';
 

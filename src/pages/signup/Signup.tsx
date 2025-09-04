@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, User, Phone, UserPlus } from 'lucide-react';
 import { ROUTES } from '../../constants/routes';
 import { Card, CardContent } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Button } from '../../components/ui/button';
+import { Button } from '../../components/ui/Button';
 import { GoogleButton } from '../../components/ui/GoogleButton';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -43,6 +43,7 @@ export const Signup = () => {
       {
         firstname: data.firstname.trim(),
         lastname: data.lastname.trim(),
+        username: data.username.trim(),
         email: data.email.trim(),
         password: data.password,
         phone: data.phone?.trim() || undefined,
@@ -108,6 +109,19 @@ export const Signup = () => {
                   required
                 />
               </div>
+
+              <AuthInput
+                id="username"
+                label="User Name"
+                type="text"
+                placeholder="Enter user name"
+                icon={User}
+                register={register('username')}
+                error={errors.username?.message}
+                disabled={isLoading}
+                autoComplete="user-name"
+                required
+              />
 
               <AuthInput
                 id="email"
