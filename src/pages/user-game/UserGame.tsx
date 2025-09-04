@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
+import type { Square } from 'chess.js';
 import {
   Clock,
   User,
@@ -108,10 +109,12 @@ export function UserGame() {
           }
         } else {
           // Invalid move, try selecting the new square
-          const piece = chess.get(square);
+          const piece = chess.get(square as Square);
           if (piece && piece.color === chess.turn()) {
             setSelectedSquare(square);
-            setPossibleMoves(chess.moves({ square, verbose: false }));
+            setPossibleMoves(
+              chess.moves({ square: square as Square, verbose: false })
+            );
           } else {
             setSelectedSquare(null);
             setPossibleMoves([]);
@@ -124,10 +127,10 @@ export function UserGame() {
       }
     } else {
       // Select a square
-      const piece = chess.get(square);
+      const piece = chess.get(square as Square);
       if (piece && piece.color === chess.turn()) {
         setSelectedSquare(square);
-        const moves = chess.moves({ square, verbose: false });
+        const moves = chess.moves({ square: square as Square, verbose: false });
         setPossibleMoves(moves);
       }
     }
@@ -180,9 +183,9 @@ export function UserGame() {
           >
             {piece &&
               PIECE_SYMBOLS[
-                piece.type === piece.type.toUpperCase()
-                  ? piece.type
-                  : piece.type.toLowerCase()
+                (piece.color === 'w'
+                  ? piece.type.toUpperCase()
+                  : piece.type.toLowerCase()) as keyof typeof PIECE_SYMBOLS
               ]}
           </div>
         );
