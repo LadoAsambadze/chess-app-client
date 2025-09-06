@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
-import { useCreateGame } from '../../hooks/useGame';
 import { Button } from '../ui/Button';
 import { TimePresetButton } from './TimePressButton';
 import { PrivacyOption } from './PrivaciOption';
+import { useCreateGame } from '../../hooks/games/useCreateGame';
 
 const timePresets = [
   { label: '1m', value: 60 },
@@ -27,11 +27,12 @@ export function CreateGame() {
   const [timeControl, setTimeControl] = useState(600);
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState('');
-  const createGameMutation = useCreateGame();
+
+  const { createGame, isLoading, error } = useCreateGame();
 
   const handleCreateGame = () => {
-    createGameMutation.mutate({
-      timeControl,
+    createGame({
+      timeControl: timeControl,
       isPrivate,
       password: isPrivate ? password : undefined,
     });
@@ -123,12 +124,10 @@ export function CreateGame() {
         {/* Create Button */}
         <Button
           onClick={handleCreateGame}
-          disabled={
-            createGameMutation.isPending || (isPrivate && !password.trim())
-          }
+          disabled={isLoading || (isPrivate && !password.trim())}
           className="w-full h-10 text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-md"
         >
-          {createGameMutation.isPending ? (
+          {isLoading ? (
             <>
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               Creating...
@@ -141,10 +140,10 @@ export function CreateGame() {
           )}
         </Button>
 
-        {createGameMutation.isError && (
+        {error && (
           <Alert variant="destructive" className="bg-red-50 border-red-200">
             <AlertDescription className="text-red-800 text-xs">
-              {createGameMutation.error?.message || 'Failed to create game'}
+              {error}
             </AlertDescription>
           </Alert>
         )}
