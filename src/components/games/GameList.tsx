@@ -2,7 +2,6 @@
 
 import { Gamepad2, X, AlertCircle } from 'lucide-react';
 import {
-  useGetGames,
   useJoinGame,
   useGameRequests,
   useAcceptOpponent,
@@ -11,16 +10,18 @@ import {
   useLeaveGame,
 } from '../../hooks/useGame';
 import { useEffect } from 'react';
-
 import { useNavigate } from 'react-router-dom';
 import { JoinRequestModal } from './JoinRequestModal';
 import { GameItem } from './GameItem';
 import { useCurrentUser } from '../../hooks/useAuth';
+import { useGetGames } from '../../hooks/games/useGetGames';
 
 export function GamesList() {
   const navigate = useNavigate();
   const { data: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id;
+
+  const { games, loading, error } = useGetGames();
 
   const joinMutation = useJoinGame();
   const acceptMutation = useAcceptOpponent();
@@ -28,7 +29,6 @@ export function GamesList() {
   const cancelMutation = useCancelGame();
   const leaveMutation = useLeaveGame();
 
-  const { data: games, isPending: loading, error } = useGetGames();
   const {
     joinRequest,
     respondToJoinRequest,
@@ -40,12 +40,6 @@ export function GamesList() {
   const uniqueGames = Array.from(
     new Map((games ?? []).map((g) => [g.id, g])).values()
   );
-
-  // const [showAlert, setShowAlert] = useState(false);
-
-  // useEffect(() => {
-  //   setShowAlert(!!joinRequest);
-  // }, [joinRequest]);
 
   useEffect(() => {
     if (games && currentUserId) {
@@ -62,9 +56,7 @@ export function GamesList() {
   const handleJoin = async (gameId: string) => {
     try {
       await joinMutation.mutateAsync({ gameId });
-    } catch (error) {
-      // Error handled by mutation
-    }
+    } catch (error) {}
   };
 
   const handleCancel = (gameId: string) => {
