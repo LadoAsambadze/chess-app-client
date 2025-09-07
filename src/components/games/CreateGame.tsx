@@ -50,7 +50,6 @@ export function CreateGame() {
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {/* Time Control */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -79,7 +78,6 @@ export function CreateGame() {
           </div>
         </section>
 
-        {/* Privacy Settings */}
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Shield className="h-3.5 w-3.5 text-blue-500" />
@@ -121,7 +119,6 @@ export function CreateGame() {
           )}
         </section>
 
-        {/* Create Button */}
         <Button
           onClick={handleCreateGame}
           disabled={isLoading || (isPrivate && !password.trim())}
