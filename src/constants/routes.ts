@@ -5,5 +5,5 @@ export const ROUTES = {
   UPDATE_PASSWORD: '/update-password',
   SUCCESS: '/auth-success',
   GAMES: '/games',
-  USER_GAME: '/games/:userGame',
+  USER_GAME: '/games/:gameId',
 } as const;
